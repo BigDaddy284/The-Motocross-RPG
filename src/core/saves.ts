@@ -174,11 +174,21 @@ function isCareer(v: unknown): boolean {
     Number.isInteger(c.money) &&
     !!bike && typeof bike.brand === 'string' && typeof bike.class === 'string' && typeof bike.parts === 'object' && bike.parts !== null &&
     Object.values(bike.parts).every((p) => Number.isInteger(p?.grade) && typeof p?.condition === 'number') &&
-    Array.isArray(c.bag) && c.bag.every((b) => typeof b?.id === 'string') &&
+    Array.isArray(c.bag) && c.bag.every((b) => typeof b?.id === 'string' && (b.part === undefined || isSpare(b.part))) &&
+    (c.shops === undefined || isShopState(c.shops)) &&
     !!story && Number.isInteger(story.step) && Array.isArray(story.used) &&
     typeof c.counters === 'object' && c.counters !== null &&
     isSkills(c.skills)
   );
+}
+
+function isSpare(p: Record<string, unknown>): boolean {
+  return typeof p.slot === 'string' && typeof p.class === 'string' && Number.isInteger(p.grade) && typeof p.condition === 'number';
+}
+
+function isShopState(v: unknown): boolean {
+  const s = v as Record<string, unknown>;
+  return typeof s === 'object' && s !== null && [s.seed, s.refresh, s.raceDays, s.activities].every(Number.isInteger) && Array.isArray(s.sold);
 }
 
 function isSkills(v: unknown): boolean {

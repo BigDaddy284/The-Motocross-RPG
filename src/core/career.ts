@@ -2,6 +2,7 @@
 // and shift work. Pure rules with no graphics, so they can be tested and reused by a later
 // standalone economy tool (GDD 2.2).
 
+import type { ShopState, SparePart } from './shops';
 import { newSkillState, type SkillState } from './skills';
 
 export interface StatDef {
@@ -110,6 +111,8 @@ export interface Bike {
 
 export interface BagItem {
   id: string;
+  /** A spare bike part, with its own grade and condition (id "spare"). */
+  part?: SparePart;
 }
 
 export interface CareerState {
@@ -122,6 +125,8 @@ export interface CareerState {
   /** Running totals such as batches finished per employer, race days and wins. */
   counters: Record<string, number>;
   skills: SkillState;
+  /** Shop stock rotation, made on the first shop visit. */
+  shops?: ShopState;
 }
 
 export const pence = (pounds: number) => Math.round(pounds * 100);

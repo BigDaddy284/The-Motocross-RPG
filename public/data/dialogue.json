@@ -99,7 +99,7 @@
       { "speaker": "npc", "text": "Treat that van right and it'll get you to every track in the area." }
     ] },
     "bike_shop_owner.hello": { "lines": [
-      { "speaker": "npc", "text": "Parts for 50s and 65s, Grades 1 to 3. The shelves are still being stocked, sorry." }
+      { "speaker": "npc", "text": "Parts for 50s and 65s, Grades 1 to 3. Have a look at the counter." }
     ] },
     "tyre_specialist.hello": { "lines": [
       { "speaker": "npc", "text": "Tyres, rims, spokes. Hard pack round here, so you'll want a hard-pack rear." }

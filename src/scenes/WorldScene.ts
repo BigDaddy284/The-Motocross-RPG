@@ -9,6 +9,7 @@ import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../core/settings';
 import { applyMapState, clearedPatches, hiddenSprites } from '../core/mapState';
 import { WORLD_MAP, spawnTile, stepTriggerAt } from '../core/travel';
 import { entryFee, practiceFee, venueProblem, type VenueDef } from '../core/raceDay';
+import { noteActivity, shopForAction, type ShopDef } from '../core/shops';
 import { CAREER_SLOT, services } from '../services';
 import { Character, TILE } from '../world/Character';
 import { MapView, OVERHEAD_DEPTH, isMapCached, loadMapImages } from '../world/MapView';
@@ -130,6 +131,11 @@ export class WorldScene extends Phaser.Scene {
     this.hud.showMapTitle(map.title);
     this.hud.showCareer(this.save.career, this.save.flags);
     this.hud.showShift(null);
+    // Buying, selling, repairs and dumping spares change the career in the HUD's panels.
+    this.hud.onShopChange = () => {
+      this.hud.showCareer(this.save.career, this.save.flags);
+      this.milestoneSave();
+    };
     cam.fadeIn(250, 20, 20, 30);
     this.busy = false;
     if (this.intro) this.say('', services.content.story.intro);
@@ -310,6 +316,8 @@ export class WorldScene extends Phaser.Scene {
     const action = typeof o.props.action === 'string' ? o.props.action : null;
     const objectKey = `${this.map.id}:${o.name}:${o.x},${o.y}`;
     if (action && this.runStory({ use: action, map: this.map.id, object: objectKey }, '')) return;
+    const shop = action ? shopForAction(services.content.shops, this.map.id, action) : null;
+    if (shop && this.openShop(shop.shop, shop.fit ? 'fit' : 'buy')) return;
     const venue = o.type === 'venue' ? services.content.tracks.venues.find((v) => v.id === o.props.venue) : undefined;
     if (venue) {
       if (venue.office && !venue.locked) {
@@ -342,7 +350,20 @@ export class WorldScene extends Phaser.Scene {
       this.openVenue(office, () => this.faceBack(placement, character));
       return;
     }
+    const shop = services.content.shops.shops.find((s) => s.npc === npc.id);
+    if (shop && !this.talkRule(npc) && this.openShop(shop, 'buy', () => this.faceBack(placement, character))) return;
     this.say(npc.name, this.dialogueFor(npc), () => this.faceBack(placement, character));
+  }
+
+  /**
+   * Opens a shop or the garage's services. Returns false while it is shut (before the opening
+   * chain is done), so the object or NPC says its usual line instead.
+   */
+  private openShop(shop: ShopDef, tab: 'buy' | 'fit', onClose: () => void = () => this.player.idle()): boolean {
+    if (shop.needs && !this.save.flags[shop.needs]) return false;
+    this.hud.showCareer(this.save.career, this.save.flags);
+    this.hud.openShop(shop, tab, onClose);
+    return true;
   }
 
   private faceNpc(character: Character): void {
@@ -358,9 +379,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** The NPC's line set for the current flags (npcs.json talk), or their default dialogue. */
   private dialogueFor(npc: NpcDef): string {
+    return this.talkRule(npc)?.dialogue ?? npc.dialogue;
+  }
+
+  private talkRule(npc: NpcDef): { dialogue: string } | undefined {
     const f = this.save.flags;
-    const rule = npc.talk?.find((t) => (t.if === undefined || f[t.if]) && (t.unless === undefined || !f[t.unless]));
-    return rule?.dialogue ?? npc.dialogue;
+    return npc.talk?.find((t) => (t.if === undefined || f[t.if]) && (t.unless === undefined || !f[t.unless]));
   }
 
   /** Shows a dialogue by key, filling in {rider} and any extra values. */
@@ -474,6 +498,7 @@ export class WorldScene extends Phaser.Scene {
       if (shift.made >= shift.job.batch) {
         const c = this.save.career.counters;
         c[shift.job.id] = (c[shift.job.id] ?? 0) + 1;
+        noteActivity(services.content.shops, this.save.career, 'activity');
         this.endShift(`Batch done: ${shift.made} ${shift.job.product}s, ${formatMoney(jobPay(services.content.world, shift.job) * shift.made)} earned.`);
         this.milestoneSave();
         return;

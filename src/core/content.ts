@@ -4,6 +4,7 @@ import { objectTile, type BakedMap, type Facing } from './mapTypes';
 import type { RacingData } from './race';
 import { RACING_SCHEMA, RIDERS_SCHEMA, SKILLS_SCHEMA, TRACKS_SCHEMA, checkRaceContent } from './raceContent';
 import type { RidersData, TracksData } from './raceDay';
+import { SHOPS_SCHEMA, checkShopContent, type ShopsData } from './shops';
 import type { SkillsData } from './skills';
 import { validate, type ContentError, type Schema } from './validate';
 
@@ -41,6 +42,7 @@ export interface Content {
   racing: RacingData;
   tracks: TracksData;
   riders: RidersData;
+  shops: ShopsData;
 }
 
 export interface Manifest {
@@ -254,6 +256,7 @@ export const CONTENT_FILES = {
   racing: 'data/racing.json',
   tracks: 'data/tracks.json',
   riders: 'data/riders.json',
+  shops: 'data/shops.json',
 } as const;
 
 export type RawContent = Record<keyof typeof CONTENT_FILES, unknown>;
@@ -269,6 +272,7 @@ const SCHEMAS: Record<keyof typeof CONTENT_FILES, Schema> = {
   racing: RACING_SCHEMA,
   tracks: TRACKS_SCHEMA,
   riders: RIDERS_SCHEMA,
+  shops: SHOPS_SCHEMA,
 };
 
 /** Checks raw file contents and returns the typed content, or every problem found. */
@@ -287,6 +291,7 @@ export function checkContent(raw: RawContent, manifest: Manifest, maps: Map<stri
     racing: raw.racing as RacingData,
     tracks: raw.tracks as TracksData,
     riders: raw.riders as RidersData,
+    shops: raw.shops as ShopsData,
   };
   const file = CONTENT_FILES.npcs;
   const seen = new Set<string>();
@@ -308,6 +313,7 @@ export function checkContent(raw: RawContent, manifest: Manifest, maps: Map<stri
   });
   errors.push(...checkCareerContent(content, maps));
   errors.push(...checkRaceContent(content, maps));
+  errors.push(...checkShopContent(CONTENT_FILES.shops, content.shops, content.bikes, seen, maps));
   return { content, errors };
 }
 

@@ -1,0 +1,47 @@
+{
+  "note": "Area 1 parts shops and the garage's repairs (GDD 8.3 to 8.5, Spec 7.4, 14.4 to 14.6). Prices are in pounds for a new Grade 1 part on a 50cc; each grade costs gradeFactor times the one below. slotBase values not given in Spec 14.4 (bottom end, shock, brakes, bodywork, wheels and tyres as one slot) are first-pass guesses to tune in testing. Frames are not sold: they come from your sponsor or the class dealer (Spec 18.9). fitFee is the garage's bench fee for fitting a spare (provisional); parts bought in a shop are fitted there free.",
+  "slotBase": {
+    "frame": 400,
+    "top_end": 35,
+    "bottom_end": 70,
+    "intake_exhaust": 80,
+    "drivetrain": 30,
+    "forks": 120,
+    "shock": 110,
+    "wheels_tyres": 25,
+    "brakes": 30,
+    "bodywork": 45
+  },
+  "classPriceFactor": { "50cc": 1.0, "65cc": 1.2, "85cc": 1.5, "125y": 1.8, "125cc": 2.2, "250f": 2.8, "450f": 3.5, "vets": 3.5 },
+  "gradeFactor": 2,
+  "repairShare": 0.7,
+  "resale": { "base": 0.2, "perCondition": 0.4, "otherShop": 0.5, "demand": [0.9, 1.1] },
+  "rotation": { "raceDays": 3, "activities": 10 },
+  "spareLimit": 20,
+  "shops": [
+    {
+      "id": "shop.bike", "name": "General bike shop", "npc": "npc.bike_shop_owner", "map": "int-home-bike-shop",
+      "actions": ["shop.bike_parts"], "needs": "tutorial_done",
+      "greeting": "Engine, suspension and bodywork for the 50s and 65s, Grades 1 to 3. Grade 1 is always on the shelf; the better stuff comes and goes.",
+      "sells": {
+        "slots": ["top_end", "bottom_end", "intake_exhaust", "drivetrain", "forks", "shock", "bodywork"],
+        "grades": [1, 3], "classes": ["50cc", "65cc"], "extraChance": { "2": 0.6, "3": 0.3 }
+      }
+    },
+    {
+      "id": "shop.tyres", "name": "Tyres and wheels", "npc": "npc.tyre_specialist", "map": "int-home-tyre-shop",
+      "actions": ["shop.tyres_wheels"], "needs": "tutorial_done",
+      "greeting": "Tyres, rims, spokes and brakes. Hard pack round here, so keep an eye on that rear.",
+      "sells": {
+        "slots": ["wheels_tyres", "brakes"],
+        "grades": [1, 3], "classes": ["50cc", "65cc"], "extraChance": { "2": 0.6, "3": 0.3 }
+      }
+    },
+    {
+      "id": "garage", "name": "Local garage", "npc": "npc.garage_mechanic", "map": "int-home-local-garage",
+      "actions": ["service.paid_repair"], "fitAction": "workshop.fit_tune", "needs": "tutorial_done",
+      "greeting": "Grade 2 and up, I'll bring it back to new, one grade down. Got spares? I'll fit them on the bench.",
+      "repairs": true, "fitFee": 5
+    }
+  ]
+}

@@ -38,6 +38,10 @@ const NOW: Record<string, (flags: Record<string, boolean>) => string> = {
   'shop.van': (f) => (f.van_owned ? "The van's yours. It's parked outside your room." : 'Used van: £600, no haggling. Talk to the van seller.'),
   'workshop.fit_tune': () => 'The garage workbench. Nothing to fit right now.',
   'storage.parts': (f) => (f.van_loaded ? 'Your spares are packed in the van.' : 'Your spares chest.'),
+  // Shops open once the opening chain is done; until then they only say they're busy.
+  'shop.bike_parts': () => "The parts counter. They're busy with the garage's order. Check your task.",
+  'shop.tyres_wheels': () => "The tyre counter. They're busy with the garage's order. Check your task.",
+  'service.paid_repair': () => 'Paid repairs. The mechanic will have time once you have finished helping out.',
 };
 
 /** The message for a usable object, or null if clicking it should just walk there. */

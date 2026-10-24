@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { formatMoney } from '../core/career';
 import { formatTime, type LapTrace, type MotoSim, type RaceEvent, type RiderResult } from '../core/race';
 import { PLAYER_ID, RaceDay, applyRide, playerEntrant, practiceSim, sumXp, type MotoRecord, type VenueDef } from '../core/raceDay';
+import { noteActivity } from '../core/shops';
 import type { SaveData } from '../core/saves';
 import { services } from '../services';
 import { COLORS, textStyle } from '../ui/theme';
@@ -670,6 +671,7 @@ export class RaceScene extends Phaser.Scene {
     const c = career.counters;
     const myRows = day.motos.map((m) => m.results.find((r) => r.player)!);
     c['race.days'] = (c['race.days'] ?? 0) + 1;
+    noteActivity(services.content.shops, career, 'raceDay');
     c['race.motos'] = (c['race.motos'] ?? 0) + myRows.filter((r) => !r.retired).length;
     c['race.wins'] = (c['race.wins'] ?? 0) + myRows.filter((r) => !r.retired && r.position === 1).length;
     const me = res.overall.find((r) => r.player)!;
@@ -738,6 +740,7 @@ export class RaceScene extends Phaser.Scene {
     const career = this.save.career;
     const before = structuredClone(career.bike.parts);
     const payout = applyRide(services.content, career, sim.playerBike, -this.args.fee, sim.xp);
+    if (p.lapTimes.length) noteActivity(services.content.shops, career, 'activity');
     const c = this.openModal(760, 520);
     c.add(this.add.text(0, -220, forced ? 'Practice over: your bike is broken' : 'Practice done', textStyle(26, COLORS.accent)).setOrigin(0.5));
     const best = p.lapTimes.length ? formatTime(Math.min(...p.lapTimes)) : '—';
