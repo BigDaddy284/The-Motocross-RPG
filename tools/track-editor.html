@@ -1,0 +1,2553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motocross RPG Track Editor</title>
+<!--
+  Motocross RPG: Track Editor. One self-contained file, no build step, no network.
+
+  Edits the race tracks in public/data/tracks.json (src/core/race.ts TrackDef):
+    * Layout: the shape drawn on the race screen (path, points on a 100 x 60 grid starting at the
+      finish line), the start straight from the gate onto the lap (start.path), the track's kind
+      (stadium, outdoor, endurance) and width.
+    * Sections: what the race simulation rides, in order (type, length in metres, passing chance,
+      the line riders take, jump height) and the start gate curve. Section types come from
+      public/data/racing.json, read only.
+    * Surfaces: mud, sand, water and other patches along the lap.
+    * Ground: the ground tiles round the track, from the game's tile art.
+    * Scenery: banners, tuff blocks, hay bales, stands, trees and the rest.
+  The parts lists (kinds, surfaces, ground, scenery) come from public/data/trackParts.json.
+
+  Development and Final v1: trackParts.json "sectionEditor" shows the section editor (sections,
+  gates, lines, jump heights, section boundaries). Final v1 sets it to false, leaving the track
+  and surroundings editor; the section data in tracks.json and the race simulation stay as they
+  are. Add ?final=1 to the address to try the Final v1 editor during development.
+
+  Sections sit on the drawing by their share of the lap length, the same way the race screen
+  places riders (src/world/TrackView.ts). Dragging a boundary between two sections moves metres
+  from one to the other, so the lap length stays the same.
+
+  Single tracks can be exported and imported as .track.json files, the start of player-made tracks
+  for the planned modding tools (GDD).
+-->
+<style>
+:root {
+  --bg: #16181d; --panel: #1f2229; --panel2: #262a33; --line: #343945; --text: #e4e6eb; --dim: #9aa1ad;
+  --accent: #f0a020; --accent2: #3a8fd8; --danger: #e05252; --ok: #4fb36b; --warn: #e0b052;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: 260px 1fr 370px; grid-template-areas: "top top top" "left main right" "foot foot foot"; overflow: hidden; }
+header { grid-area: top; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 14px; margin: 0 8px 0 2px; white-space: nowrap; }
+header h1 span { color: var(--accent); }
+#edition { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #233a52; color: #bcd8f2; }
+#edition.final { background: #3b2c10; color: #f0c880; }
+#left, #right { background: var(--panel); overflow-y: auto; padding: 8px; }
+#left { grid-area: left; border-right: 1px solid var(--line); }
+#right { grid-area: right; border-left: 1px solid var(--line); }
+main { grid-area: main; position: relative; overflow: hidden; background: #0d0e11; }
+canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#toolbar { position: absolute; left: 8px; top: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+#toolbar > * { pointer-events: auto; }
+footer { grid-area: foot; display: flex; gap: 14px; padding: 4px 10px; background: var(--panel); border-top: 1px solid var(--line); color: var(--dim); white-space: nowrap; overflow: hidden; }
+footer #msg { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+footer #msg.err { color: var(--danger); }
+footer #msg.ok { color: var(--ok); }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 14px 0 6px; }
+h2:first-child { margin-top: 2px; }
+button, select, input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; }
+input[type=number] { padding: 3px 4px; }
+input[type=color] { width: 44px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: var(--panel2); }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: #556; background: #2d323c; }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: #3b2c10; border-color: #7a5512; }
+button.on { background: #233a52; border-color: var(--accent2); }
+.sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
+.grow { flex: 1; }
+#dirty { color: var(--accent); font-weight: 600; }
+.row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.row > button { flex: 1 1 auto; }
+label.chk { display: flex; gap: 6px; align-items: center; color: var(--dim); }
+.hint { color: var(--dim); font-size: 12px; margin: 4px 0; }
+.field { display: grid; grid-template-columns: 70px 1fr; gap: 4px 6px; align-items: center; margin: 3px 0; }
+.field label { color: var(--dim); }
+.field input[type=text], .field select, .field input[type=number] { width: 100%; }
+#trackList { display: flex; flex-direction: column; gap: 2px; }
+#trackList div { padding: 5px 7px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }
+#trackList div:hover { background: var(--panel2); }
+#trackList div.active { border-color: var(--accent); background: #2a2516; }
+#trackList small { color: var(--dim); }
+#modes { display: flex; gap: 2px; margin-bottom: 8px; position: sticky; top: -8px; background: var(--panel); padding: 4px 0; z-index: 1; }
+#modes button { flex: 1; padding: 5px 2px; font-size: 12px; }
+#modes button small { display: block; color: var(--dim); font-size: 10px; }
+.pane { display: none; }
+.pane.show { display: block; }
+.list { display: flex; flex-direction: column; gap: 2px; }
+.sec { display: grid; grid-template-columns: 8px 20px 1fr 56px 48px auto; gap: 4px; align-items: center; padding: 3px 4px; border: 1px solid transparent; border-radius: 6px; }
+.sec:hover { background: var(--panel2); }
+.sec.active { border-color: var(--accent); background: #2a2516; }
+.sec .sw { width: 8px; height: 22px; border-radius: 2px; }
+.sec .n { color: var(--dim); font-size: 11px; text-align: right; }
+.sec.off { border-color: #c03030; }
+.sec.off .n { color: #ff7070; font-weight: 700; }
+.sec select, .sec input { width: 100%; }
+.sec select { padding: 3px 2px; }
+.btns { display: flex; gap: 1px; }
+.btns button { padding: 2px 5px; font-size: 11px; }
+.sechead { display: grid; grid-template-columns: 8px 20px 1fr 56px 48px 66px; gap: 4px; color: var(--dim); font-size: 11px; padding: 0 4px; }
+.patch { display: grid; grid-template-columns: 8px 1fr 60px 52px auto; gap: 4px; align-items: center; padding: 3px 4px; border: 1px solid transparent; border-radius: 6px; }
+.patch.active { border-color: var(--accent); background: #2a2516; }
+.patch .sw { width: 8px; height: 22px; border-radius: 2px; }
+.patch select, .patch input { width: 100%; }
+.patchhead { display: grid; grid-template-columns: 8px 1fr 60px 52px 30px; gap: 4px; color: var(--dim); font-size: 11px; padding: 0 4px; }
+.box { background: var(--panel2); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+.pal { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 4px; }
+.pal button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; font-size: 11px; line-height: 1.15; }
+.pal button.sel { border-color: var(--accent); background: #2a2516; }
+.pal canvas { width: 44px; height: 44px; image-rendering: pixelated; }
+#stats { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; }
+#stats span:nth-child(odd) { color: var(--dim); }
+#checks { font-size: 12px; }
+#checks div { padding: 3px 4px; border-radius: 4px; }
+#checks .bad { color: #f0a0a0; }
+#checks .warn { color: var(--warn); }
+#checks .good { color: var(--ok); }
+#legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--dim); }
+#legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+#welcome { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; background: #0d0e11; }
+#welcome .card { max-width: 640px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; }
+#welcome h3 { margin: 0 0 8px; font-size: 18px; }
+#welcome p, #welcome li { color: var(--dim); }
+#welcome code { color: var(--text); background: #0006; padding: 0 4px; border-radius: 3px; }
+#welcome .row { margin-top: 14px; }
+kbd { font: 11px ui-monospace, monospace; background: #0005; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; max-width: 640px; }
+dialog::backdrop { background: #0008; }
+dialog li { margin: 3px 0; color: var(--dim); }
+input[type=file] { display: none; }
+body.final .final-hide { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏁 <span>Motocross RPG</span> Track Editor</h1>
+  <span id="edition" title="Set by trackParts.json sectionEditor">Development</span>
+  <button id="btnOpen" class="primary" title="Pick the repo, public, or public/data">Open folder…</button>
+  <input type="file" id="dirInput" webkitdirectory multiple>
+  <input type="file" id="importInput" accept=".json,application/json">
+  <span id="srcName" class="hint"></span>
+  <span class="sep"></span>
+  <button id="btnSave" disabled title="Ctrl+S">Save</button>
+  <button id="btnDownload" disabled title="Download tracks.json">Download</button>
+  <span id="dirty"></span>
+  <span class="sep"></span>
+  <button id="btnUndo" disabled title="Ctrl+Z">↶ Undo</button>
+  <button id="btnRedo" disabled title="Ctrl+Y / Ctrl+Shift+Z">↷ Redo</button>
+  <span class="grow"></span>
+  <button id="btnHelp">Help</button>
+</header>
+
+<aside id="left">
+  <h2>Tracks</h2>
+  <div id="trackList"><div class="hint">Open a folder to see the tracks.</div></div>
+  <div class="row" style="margin-top:6px">
+    <button id="btnNew" disabled>New</button>
+    <button id="btnDup" disabled>Duplicate</button>
+    <button id="btnDel" disabled>Delete</button>
+  </div>
+  <div class="row" style="margin-top:4px">
+    <button id="btnImport" disabled title="Add a track from a .track.json file">Import…</button>
+    <button id="btnExport" disabled title="Save this track on its own as a .track.json file">Export</button>
+  </div>
+
+  <h2>Track</h2>
+  <div id="props">
+    <div class="field"><label for="fId">Id</label><input type="text" id="fId" disabled></div>
+    <div class="field"><label for="fName">Name</label><input type="text" id="fName" disabled></div>
+    <div class="field"><label for="fKind">Kind</label><select id="fKind" disabled></select></div>
+    <div class="field"><label for="fWidth">Width</label><input type="number" id="fWidth" min="1" max="12" step="0.2" disabled title="Track width on the race screen, in grid units"></div>
+    <div class="field"><label for="fSize">Size</label><input type="text" id="fSize" list="sizes" disabled></div>
+    <div class="field"><label for="fSurface">Surface</label><input type="text" id="fSurface" list="surfaces" disabled></div>
+    <div class="field final-hide"><label for="fGates">Gates</label><input type="text" id="fGates" disabled title="Start time bonus in percent for each gate, best gate first, separated by commas. Empty: no gate pick."></div>
+    <div class="field final-hide"><span></span><label class="chk"><input type="checkbox" id="fPractice" disabled> Practice only (no races)</label></div>
+    <datalist id="sizes"></datalist>
+    <datalist id="surfaces"></datalist>
+  </div>
+  <div class="hint" id="kindInfo"></div>
+  <div class="hint" id="venueInfo"></div>
+
+  <h2>Checks</h2>
+  <div id="checks" class="hint">Open a folder.</div>
+</aside>
+
+<main>
+  <canvas id="view"></canvas>
+  <div id="toolbar">
+    <button id="btnInsert" title="Add a point halfway to the next one (or double-click the track)">+ Point</button>
+    <button id="btnDelPt" title="Delete the selected point (Del, or right-click it)">− Point</button>
+    <button id="btnRound" title="Round off the corner at the selected point (R)">Round corner</button>
+    <button id="btnStart" title="Make the selected point the finish line, where every lap starts and ends">Finish here</button>
+    <button id="btnAddStart" title="Add the start gate on its own start straight that joins the lap. Drag its blue points to shape it; the white one stays on the lap where it joins.">+ Start straight</button>
+    <button id="btnReverse" title="Ride the track the other way round">Reverse</button>
+    <button id="btnFit" title="Centre the drawing and scale it to fill the grid">Fit to grid</button>
+    <span class="sep"></span>
+    <label class="chk" style="background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:3px 8px"><input type="checkbox" id="snap" checked> Snap</label>
+    <label class="chk" style="background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:3px 8px" title="Fade the ground and scenery to see the track"><input type="checkbox" id="showScene" checked> Scenery</label>
+    <button id="btnPlay" title="Ride a dot round the lap (P). It slows down in the harder sections.">▶ Preview</button>
+    <button id="btnRide" title="Open a race day on this track in the game, with npm run dev running. Save first: the game reads the saved tracks.json.">Race it in the game</button>
+  </div>
+  <div id="welcome">
+    <div class="card">
+      <h3>Open the game's track data</h3>
+      <p>Click <b>Open folder…</b> and pick the repo folder or its <code>public</code> folder (<code>public/data</code> works too, without the tile art). The editor uses:</p>
+      <ul>
+        <li><code>data/tracks.json</code>, the tracks and venues it edits,</li>
+        <li><code>data/trackParts.json</code> for track kinds, surfaces, ground and scenery, and <code>data/racing.json</code> for the section types (both read only), and</li>
+        <li><code>assets/art</code> for the ground and scenery tiles, the same art as the map editor.</li>
+      </ul>
+      <p>In Chrome or Edge, <b>Save</b> writes straight back into the folder. In other browsers, Save downloads <code>tracks.json</code> for you to copy into place.</p>
+      <div class="row"><button class="primary" id="btnOpen2">Open folder…</button><button id="btnHelp2">Help and shortcuts</button></div>
+      <p id="serverHint" class="hint"></p>
+    </div>
+  </div>
+</main>
+
+<aside id="right">
+  <div id="modes">
+    <button data-mode="layout" title="1">Layout<small class="final-hide">and sections</small></button>
+    <button data-mode="surface" title="2">Surfaces</button>
+    <button data-mode="ground" title="3">Ground</button>
+    <button data-mode="scenery" title="4">Scenery</button>
+  </div>
+
+  <div class="pane" id="pane-layout">
+    <div class="hint">Drag the points to shape the lap. Double-click the track to add a point, right-click a point to remove it.</div>
+    <div class="final-hide">
+      <h2>Sections <span id="secCount" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div class="sechead"><span></span><span>#</span><span>Type</span><span>Metres</span><span>Pass</span><span></span></div>
+      <div id="sections" class="list"><div class="hint">No track open.</div></div>
+      <div class="row" style="margin-top:6px">
+        <button id="btnAddSec" disabled title="Add a section after the selected one">+ Section</button>
+        <button id="btnSplitSec" disabled title="Split the selected section into two halves">Split</button>
+        <button id="btnFitSecs" disabled title="Replace the sections with straights and corners that suit the drawing, to rename and fill with jumps">From drawing</button>
+      </div>
+      <div class="box" id="secDetail"></div>
+      <div class="hint">Sections run in order from the finish line, and each type has to suit the shape drawn there (red edge if not). Drag the white diamonds on the track to move metres between neighbouring sections. Pass is the chance of a pass being on in that section (0 to 1).</div>
+      <h2>Section colours</h2>
+      <div id="legend"></div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-surface">
+    <div class="hint">Pick a surface, then click the track to lay a patch there. Drag a patch along the track to move it, <kbd>Del</kbd> removes it.</div>
+    <div class="pal" id="surfacePal"></div>
+    <h2>Patches on this track</h2>
+    <div class="patchhead"><span></span><span>Surface</span><span>From (m)</span><span>Metres</span><span></span></div>
+    <div id="patches" class="list"></div>
+  </div>
+
+  <div class="pane" id="pane-ground">
+    <div class="hint">Paint the ground round the track. Left-click paints, right-click puts the base ground back, <kbd>Shift</kbd>+drag fills a rectangle.</div>
+    <div class="field"><label for="gBase">Base</label><select id="gBase"></select></div>
+    <div class="field"><label for="gBrush">Brush</label><select id="gBrush"><option value="1">1 cell</option><option value="2">2 × 2</option><option value="3" selected>3 × 3</option><option value="5">5 × 5</option></select></div>
+    <div class="pal" id="groundPal"></div>
+    <div class="row" style="margin-top:6px"><button id="btnAutoGround" title="Paint the chosen ground under the track and a little either side">Fill under track</button><button id="btnClearGround" title="Remove all painted ground">Clear painting</button></div>
+  </div>
+
+  <div class="pane" id="pane-scenery">
+    <div class="hint">Pick an item, then click to place it. Click an item to select it, drag to move it, <kbd>Q</kbd> <kbd>E</kbd> turn it, <kbd>Del</kbd> removes it.</div>
+    <div class="pal" id="sceneryPal"></div>
+    <div class="box" id="sceneryDetail"></div>
+  </div>
+
+  <h2>Lap</h2>
+  <div id="stats"></div>
+</aside>
+
+<footer>
+  <span id="posLabel">—</span>
+  <span id="msg"></span>
+</footer>
+
+<dialog id="help">
+  <h3 style="margin-top:0">Track editor help</h3>
+  <ul>
+    <li><b>Layout:</b> the drawing is the shape the race screen shows: points on a 100 × 60 grid, joined in order and back to the first point, which is the finish line. Drag a point to move it (snaps to whole grid units; untick <b>Snap</b> or hold <kbd>Alt</kbd> for tenths). Double-click the track to add a point, right-click a point or press <kbd>Del</kbd> to delete it, arrow keys nudge it. <b>Round corner</b> <kbd>R</kbd> swaps a sharp point for a curve.</li>
+    <li><b>Start straight:</b> every track starts from a gate on its own start straight that joins the lap, as on a real track. Its points are the blue squares: the first is the gate (the black bar, with the yellow line-up behind it), the white one is where it joins the lap and stays on the lap when dragged. <b>+ Start straight</b> adds one beside the first part of the lap. Riders ride it once, then the lap from the join to the finish line, which ends lap 1. Select a blue point for <b>+ Point</b> and <b>− Point</b>. The checks ask for it to be at least 12 grid units long, clear of the lap until it joins, joining in the first half of the lap at 75° or less.</li>
+    <li><b>Kind</b> sets how the race screen shows the track: a stadium track fits on one screen; outdoor and endurance tracks use a camera that follows the riders, with a map of the whole lap. <b>Width</b> is the track width on the race screen.</li>
+    <li class="final-hide"><b>Sections</b> are what the race simulation rides, in order. Each is placed on the drawing by its share of the lap length, and its type has to suit the shape drawn there (straight, sweeper, corner or hairpin, as racing.json says): a hairpin on a straight would have riders braking for nothing. A section that doesn't suit its drawing is edged in red and listed in the checks. <b>From drawing</b> replaces the sections with straights and corners that suit the drawing. Click the track to pick the section under the pointer. Drag a white diamond to move metres between two sections. The section box sets the line riders take through it and the height of jumps and hills.</li>
+    <li class="final-hide"><b>Gates</b> is the start bonus curve, in percent of start time, best gate first (Spec 10.4).</li>
+    <li><b>Surfaces:</b> mud, sand, water and other patches along the lap, laid by clicking the track.</li>
+    <li><b>Ground:</b> paint the ground round the track with the game's ground tiles.</li>
+    <li><b>Scenery:</b> banners (with your own words and colour), sponsor boards, start gates, tuff blocks, hay bales, tyre walls, stands, crowds, pits, trees and more. <kbd>Q</kbd> and <kbd>E</kbd> turn the selected item, <kbd>Ctrl+D</kbd> duplicates it.</li>
+    <li><b>Modes:</b> <kbd>1</kbd> Layout, <kbd>2</kbd> Surfaces, <kbd>3</kbd> Ground, <kbd>4</kbd> Scenery.</li>
+    <li><b>Export / Import</b> save one track as a <code>.track.json</code> file and add one back.</li>
+    <li><b>Preview</b> <kbd>P</kbd> rides a dot round the lap, slower through the harder sections.</li>
+    <li><b>Race it in the game</b> opens a race day on the track with the full field, with <code>npm run dev</code> running. Save first.</li>
+    <li><b>Save</b> <kbd>Ctrl+S</kbd>. <b>Undo</b> <kbd>Ctrl+Z</kbd>, <b>Redo</b> <kbd>Ctrl+Y</kbd>. An unchanged file saves back byte for byte. After saving, run <code>npm test</code>; the game also checks the file when it starts.</li>
+    <li><b>Development and Final v1:</b> <code>trackParts.json</code> <code>"sectionEditor"</code> shows the section editing. Final v1 turns it off, leaving the track and surroundings editor; tracks keep their sections and race the same. Add <code>?final=1</code> to the address to try the Final v1 editor.</li>
+  </ul>
+  <div class="row"><button id="btnHelpClose">Close</button></div>
+</dialog>
+
+<script>
+'use strict';
+const GRID_W = 100;
+const GRID_H = 60;
+const DEFAULT_WIDTH = 3.4;
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.vite', 'coverage', '.cache', 'maps', 'characters']);
+const ART_DIR = 'assets/art/area-map/tiled/tiles';
+const ID = /^[a-z0-9_.-]+$/;
+// Mirrors src/world/TrackView.ts.
+const JUMPS = new Set(['tabletop', 'double', 'step_up', 'rhythm', 'whoops']);
+const HEIGHTS = new Set([...JUMPS, 'uphill', 'downhill']);
+const DIRT = '#c98a4b';
+const DIRT_EDGE = '#8a5a2b';
+// Section colours by the kind of riding: starts, corners, jumps, fast ground, rough ground.
+const KINDS = [
+  { name: 'Start', color: '#ffffff', types: ['start_gate'] },
+  { name: 'Corners', color: '#3a8fd8', types: ['first_corner', 'flat_corner', 'berm', 'rutted_corner', 'hairpin'] },
+  { name: 'Fast', color: '#4fb36b', types: ['straight', 'fast_sweeper', 'uphill', 'downhill'] },
+  { name: 'Jumps', color: '#e05252', types: ['tabletop', 'double', 'step_up', 'rhythm'] },
+  { name: 'Rough', color: '#b06ad8', types: ['whoops', 'braking_bumps', 'sand', 'mud'] },
+];
+const OTHER_COLOR = '#f0a020';
+// Used when there is no trackParts.json next to tracks.json.
+const FALLBACK_PARTS = {
+  sectionEditor: true,
+  kinds: [{ id: 'outdoor', name: 'Outdoor motocross', view: 'follow', desc: '' }],
+  lines: ['inside', 'middle', 'outside'],
+  surfaces: [],
+  ground: [{ id: 'grass', name: 'Grass', color: '#5f8f3c' }],
+  scenery: [],
+};
+
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const round1 = (v) => Math.round(v * 10) / 10;
+const kindOf = (type) => KINDS.find((k) => k.types.includes(type));
+const colorOf = (type) => kindOf(type)?.color ?? OTHER_COLOR;
+const lapLength = (t) => t.sections.reduce((a, s) => a + s.length, 0);
+const dirOf = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
+
+// ---------------------------------------------------------------------------------------------
+// File sources: a folder opened with the File System Access API (read/write), a folder from
+// <input webkitdirectory> (read only, saves download), or the web server this page came from.
+
+class DirSource {
+  constructor(handle) { this.root = handle; this.name = handle.name; this.files = new Map(); this.canWrite = true; }
+  async scan() {
+    const walk = async (dir, prefix, depth) => {
+      for await (const [name, h] of dir.entries()) {
+        if (h.kind === 'directory') { if (!SKIP_DIRS.has(name) && depth < 9) await walk(h, `${prefix}${name}/`, depth + 1); }
+        else if (/\.(json|png)$/.test(name)) this.files.set(prefix + name, h);
+      }
+    };
+    await walk(this.root, '', 0);
+  }
+  has(p) { return this.files.has(p); }
+  async blob(p) { const h = this.files.get(p); if (!h) throw new Error(`Missing file: ${p}`); return h.getFile(); }
+  async text(p) { return (await this.blob(p)).text(); }
+  async write(p, text) {
+    const h = this.files.get(p);
+    if (h.requestPermission && (await h.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('The browser did not allow saving into the folder.');
+    const w = await h.createWritable();
+    await w.write(text);
+    await w.close();
+  }
+}
+
+class ListSource {
+  constructor(fileList) {
+    this.files = new Map();
+    this.canWrite = false;
+    for (const f of fileList) {
+      const p = f.webkitRelativePath || f.name;
+      if (p.split('/').some((s) => SKIP_DIRS.has(s)) || !/\.(json|png)$/.test(p)) continue;
+      this.files.set(p, f);
+    }
+    this.name = [...this.files.keys()][0]?.split('/')[0] ?? 'folder';
+  }
+  async scan() {}
+  has(p) { return this.files.has(p); }
+  async blob(p) { const f = this.files.get(p); if (!f) throw new Error(`Missing file: ${p}`); return f; }
+  async text(p) { return (await this.blob(p)).text(); }
+}
+
+/** The dev server: base is the data folder's URL, with the art folder beside it. */
+class HttpSource {
+  constructor(base) { this.base = base; this.name = base; this.canWrite = false; this.http = true; this.files = new Map(); }
+  async scan() {}
+  has() { return true; }
+  async blob(p) { const r = await fetch(this.base + p, { cache: 'no-store' }); if (!r.ok) throw new Error(`Could not load ${p} (${r.status})`); return r.blob(); }
+  async text(p) { const r = await fetch(this.base + p, { cache: 'no-store' }); if (!r.ok) throw new Error(`Could not load ${p} (${r.status})`); return r.text(); }
+}
+
+// ---------------------------------------------------------------------------------------------
+// tracks.json in and out. The file is laid out by hand: one line of plain fields per track, one
+// line per list, one line per section, patch, scenery item and venue, ", " and ": " separators,
+// and some whole numbers written as "72.0". Parsing remembers those (where the browser exposes
+// the source text) so an unchanged file saves back byte for byte, and saving keeps the layout.
+
+const FLOAT_KEYS = new WeakMap();
+function parseKeepFloats(text) {
+  return JSON.parse(text, function (k, v, ctx) {
+    if (typeof v === 'number' && Number.isInteger(v) && ctx && typeof ctx.source === 'string' && /[.eE]/.test(ctx.source)) {
+      let s = FLOAT_KEYS.get(this);
+      if (!s) FLOAT_KEYS.set(this, (s = new Set()));
+      s.add(k);
+    }
+    return v;
+  });
+}
+/** Deep copy that keeps the float markers. */
+function clone(v) {
+  if (v === null || typeof v !== 'object') return v;
+  const n = Array.isArray(v) ? v.map(clone) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clone(x)]));
+  if (FLOAT_KEYS.has(v)) FLOAT_KEYS.set(n, new Set(FLOAT_KEYS.get(v)));
+  return n;
+}
+function pyStr(s) { return JSON.stringify(s).replace(/[\u0080-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`); }
+function dump(v, holder, key) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'number') return Number.isInteger(v) && FLOAT_KEYS.get(holder)?.has(String(key)) ? `${v}.0` : String(v);
+  if (typeof v === 'string') return pyStr(v);
+  if (Array.isArray(v)) return `[${v.map((x, i) => dump(x, v, i)).join(', ')}]`;
+  return `{${Object.entries(v).map(([k, x]) => `${pyStr(k)}: ${dump(x, v, k)}`).join(', ')}}`;
+}
+const isPlain = (v) => v === null || typeof v !== 'object';
+/** Lists written one item to a line. */
+const ROW_LISTS = new Set(['sections', 'patches', 'scenery']);
+
+function trackText(t) {
+  const plain = Object.keys(t).filter((k) => isPlain(t[k]));
+  const fields = [];
+  if (plain.length) fields.push(`      ${plain.map((k) => `${pyStr(k)}: ${dump(t[k], t, k)}`).join(', ')}`);
+  for (const k of Object.keys(t)) {
+    if (isPlain(t[k])) continue;
+    if (ROW_LISTS.has(k) && Array.isArray(t[k]) && t[k].length) {
+      const rows = t[k].map((s) => `        { ${Object.entries(s).map(([sk, x]) => `${pyStr(sk)}: ${dump(x, s, sk)}`).join(', ')} }`);
+      fields.push(`      ${pyStr(k)}: [\n${rows.join(',\n')}\n      ]`);
+    } else fields.push(`      ${pyStr(k)}: ${dump(t[k], t, k)}`);
+  }
+  return `    {\n${fields.join(',\n')}\n    }`;
+}
+
+function exportTracks(d) {
+  const parts = Object.keys(d).map((k) => {
+    if ((k === 'tracks' || k === 'venues') && Array.isArray(d[k]) && d[k].length) {
+      const items = k === 'tracks' ? d[k].map(trackText) : d[k].map((v) => `    ${dump(v)}`);
+      return `  ${pyStr(k)}: [\n${items.join(',\n')}\n  ]`;
+    }
+    return `  ${pyStr(k)}: ${dump(d[k], d, k)}`;
+  });
+  return `{\n${parts.join(',\n')}\n}\n`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// App state
+
+let source = null;
+const app = {
+  tracksPath: null,
+  data: null, // tracks.json
+  sectionDefs: {}, // racing.json sections
+  parts: FALLBACK_PARTS, // trackParts.json
+  final: false,
+  mode: 'layout',
+  cur: 0,
+  selPt: -1,
+  selSec: -1,
+  selPatch: -1,
+  selItem: -1,
+  selStart: -1,
+  surfaceBrush: null,
+  groundBrush: null,
+  sceneryBrush: null,
+  hoverBound: -1,
+  hoverCell: null,
+  rect: null,
+  undo: [],
+  redo: [],
+  dirty: false,
+  savedText: '',
+  play: null,
+  images: new Map(), // art path -> HTMLImageElement, or missing while loading
+  artBase: null,
+};
+const track = () => app.data?.tracks[app.cur];
+const sceneryDef = (id) => app.parts.scenery.find((s) => s.id === id);
+const groundDef = (id) => app.parts.ground.find((g) => g.id === id);
+const surfaceDef = (id) => app.parts.surfaces.find((s) => s.id === id);
+
+function snapshot() { return { data: clone(app.data), cur: app.cur, selPt: app.selPt, selSec: app.selSec, selPatch: app.selPatch, selItem: app.selItem, selStart: app.selStart }; }
+function restore(s) { Object.assign(app, { data: s.data, cur: s.cur, selPt: s.selPt, selSec: s.selSec, selPatch: s.selPatch, selItem: s.selItem, selStart: s.selStart ?? -1 }); }
+/** Call before every change. Changes made by one drag share one undo step. */
+function begin() {
+  app.undo.push(snapshot());
+  if (app.undo.length > 200) app.undo.shift();
+  app.redo.length = 0;
+}
+function changed() {
+  setDirty(exportTracks(app.data) !== app.savedText);
+  refresh();
+}
+function undo() { if (!app.undo.length) return; app.redo.push(snapshot()); restore(app.undo.pop()); changed(); }
+function redo() { if (!app.redo.length) return; app.undo.push(snapshot()); restore(app.redo.pop()); changed(); }
+function setDirty(d) { app.dirty = d; $('#dirty').textContent = d ? '● Unsaved' : ''; }
+function deselect() { app.selPt = -1; app.selSec = -1; app.selPatch = -1; app.selItem = -1; app.selStart = -1; }
+
+/** Runs a change as one undo step, and drops it if nothing actually changed. */
+function commit(fn) {
+  const t = track();
+  if (!t) return;
+  const before = exportTracks(app.data);
+  const snap = snapshot();
+  fn(t);
+  if (exportTracks(app.data) === before) return refresh();
+  app.undo.push(snap);
+  app.redo.length = 0;
+  changed();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Opening
+
+async function openFolder() {
+  if (app.dirty && !confirm('You have unsaved changes. Open another folder anyway?')) return;
+  if (window.showDirectoryPicker) {
+    let handle;
+    try { handle = await window.showDirectoryPicker({ id: 'mxrpg-tracks', mode: 'readwrite' }); }
+    catch (e) { if (e.name !== 'AbortError') status(e.message, 'err'); return; }
+    const src = new DirSource(handle);
+    status(`Reading ${handle.name}…`);
+    await src.scan();
+    await useSource(src);
+  } else {
+    $('#dirInput').value = '';
+    $('#dirInput').click();
+  }
+}
+$('#dirInput').addEventListener('change', async (e) => { if (e.target.files.length) await useSource(new ListSource(e.target.files)); });
+
+async function useSource(src) {
+  let tracksPath = 'tracks.json';
+  if (!src.http) {
+    const all = [...src.files.keys()].filter((p) => /(^|\/)tracks\.json$/.test(p));
+    tracksPath = all.find((p) => /(^|\/)public\/data\/tracks\.json$/.test(p)) ?? all.find((p) => /(^|\/)data\/tracks\.json$/.test(p)) ?? all[0];
+    if (!tracksPath) { status(`No tracks.json found in "${src.name}". Pick the repo, its public folder or public/data.`, 'err'); return; }
+  }
+  const dataDir = dirOf(tracksPath);
+  const sibling = (name) => (dataDir ? `${dataDir}/${name}` : name);
+  try {
+    const text = await src.text(tracksPath);
+    const data = parseKeepFloats(text);
+    if (!Array.isArray(data.tracks)) throw new Error('tracks.json has no "tracks" list');
+    const notes = [];
+    let sectionDefs = {};
+    try { sectionDefs = JSON.parse(await src.text(sibling('racing.json'))).sections ?? {}; }
+    catch { notes.push('no racing.json, so section types are not checked'); }
+    let parts = FALLBACK_PARTS;
+    try { parts = JSON.parse(await src.text(sibling('trackParts.json'))); }
+    catch { notes.push('no trackParts.json, so there are no surfaces or scenery to pick'); }
+    source = src;
+    // The art sits in assets/ beside data/ (public/assets, or /assets on the dev server).
+    const assets = src.http ? '..' : dirOf(dataDir);
+    const artBase = `${assets ? `${assets}/` : ''}${ART_DIR}/`;
+    const final = parts.sectionEditor === false || new URLSearchParams(location.search).has('final');
+    Object.assign(app, { tracksPath, data, sectionDefs, parts, final, artBase, cur: 0, undo: [], redo: [], savedText: text, play: null, images: new Map() });
+    deselect();
+    app.surfaceBrush = parts.surfaces[0]?.id ?? null;
+    app.groundBrush = (parts.ground.find((g) => g.id === 'dirt') ?? parts.ground[0])?.id ?? null;
+    app.sceneryBrush = parts.scenery[0]?.id ?? null;
+    document.body.classList.toggle('final', final);
+    $('#edition').textContent = final ? 'Final v1' : 'Development';
+    $('#edition').classList.toggle('final', final);
+    setDirty(exportTracks(data) !== text);
+    $('#welcome').style.display = 'none';
+    $('#srcName').textContent = src.http ? `${src.base}tracks.json` : `${src.name}/${tracksPath}`;
+    if (app.dirty) status('Loaded. The file is laid out differently from how the editor saves it, so it shows as changed.', 'err');
+    else if (notes.length) status(`Loaded ${data.tracks.length} tracks; ${notes.join('; ')}.`, 'err');
+    else status(`Loaded ${data.tracks.length} tracks from ${tracksPath}.`, 'ok');
+    buildLegend();
+    buildPalettes();
+    loadArt();
+    setMode('layout');
+  } catch (e) {
+    console.error(e);
+    status(`Could not read ${tracksPath}: ${e.message}`, 'err');
+  }
+}
+
+/** Loads the ground and scenery tile art. Anything missing is drawn in its colour instead. */
+function loadArt() {
+  const arts = [...app.parts.ground, ...app.parts.scenery].map((p) => p.art).filter(Boolean);
+  for (const art of new Set(arts)) {
+    const path = `${app.artBase}${art}.png`;
+    if (!source.http && !source.has(path)) continue;
+    source.blob(path).then((b) => {
+      const img = new Image();
+      img.onload = () => { app.images.set(art, img); buildPalettes(); requestDraw(); };
+      img.src = URL.createObjectURL(b);
+    }).catch(() => {});
+  }
+}
+const artImage = (art) => (art ? app.images.get(art) ?? null : null);
+
+// ---------------------------------------------------------------------------------------------
+// Geometry. The lap is the path closed back to its first point; f runs 0 to 1 along it.
+
+function lapGeom(t) {
+  const pts = t.path.map(([x, y]) => ({ x, y }));
+  pts.push({ ...pts[0] });
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return { pts, cum, total: cum.at(-1) || 1 };
+}
+function pointAt(g, f) {
+  const d = (((f % 1) + 1) % 1) * g.total;
+  let i = 1;
+  while (i < g.cum.length - 1 && g.cum[i] < d) i++;
+  const a = g.pts[i - 1];
+  const b = g.pts[i];
+  const t = (d - g.cum[i - 1]) / Math.max(1e-6, g.cum[i] - g.cum[i - 1]);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+/** The nearest spot on the lap to a grid point: its f, distance and segment. */
+function project(g, x, y) {
+  let best = { f: 0, dist: Infinity, seg: 0 };
+  for (let i = 1; i < g.pts.length; i++) {
+    const a = g.pts[i - 1];
+    const b = g.pts[i];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const l2 = dx * dx + dy * dy || 1e-9;
+    const t = clamp(((x - a.x) * dx + (y - a.y) * dy) / l2, 0, 1);
+    const px = a.x + dx * t;
+    const py = a.y + dy * t;
+    const dist = Math.hypot(x - px, y - py);
+    if (dist < best.dist) best = { f: (g.cum[i - 1] + Math.sqrt(l2) * t) / g.total, dist, seg: i - 1 };
+  }
+  return best;
+}
+/** Section start fractions, plus 1 at the end. */
+function sectionBounds(t) {
+  const len = lapLength(t) || 1;
+  const out = [0];
+  let d = 0;
+  for (const s of t.sections) { d += s.length; out.push(d / len); }
+  return out;
+}
+function sectionAt(t, f) {
+  const b = sectionBounds(t);
+  for (let i = 0; i < t.sections.length; i++) if (f < b[i + 1]) return i;
+  return t.sections.length - 1;
+}
+
+// Drawn shapes (as src/core/trackGeom.ts drawnShape): what a stretch of the drawing looks like,
+// measured from the drawing alone. A section's type has to suit the shape it sits on
+// (racing.json "shapes"), or riders brake on straights and take U-turns flat out.
+const STRAIGHT_UNDER = 30;
+const HAIRPIN_FROM = 135;
+const SWEEPER_WIDTHS = 2;
+const wrapAngle = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+function headingAt(g, f, span = 1.5) {
+  const df = span / g.total;
+  const a = pointAt(g, f - df);
+  const b = pointAt(g, f + df);
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+function drawnShape(g, f0, f1, width) {
+  const len = (f1 - f0) * g.total;
+  const steps = Math.max(8, Math.ceil(len / 0.25));
+  let turn = 0;
+  let swept = 0;
+  let prev = headingAt(g, f0);
+  const rates = [];
+  for (let k = 1; k <= steps; k++) {
+    const h = headingAt(g, f0 + ((f1 - f0) * k) / steps);
+    const dh = wrapAngle(h - prev);
+    turn += dh;
+    swept += Math.abs(dh);
+    rates.push(Math.abs(dh) / (len / steps));
+    prev = h;
+  }
+  const win = Math.max(1, Math.round(3 / (len / steps)));
+  let best = 0;
+  let run = 0;
+  for (let i = 0; i < rates.length; i++) {
+    run += rates[i];
+    if (i >= win) run -= rates[i - win];
+    best = Math.max(best, run / Math.min(win, i + 1));
+  }
+  const radius = best > 1e-6 ? 1 / best : Infinity;
+  const deg = (swept * 180) / Math.PI;
+  const shape = deg < STRAIGHT_UNDER ? 'straight' : deg >= HAIRPIN_FROM ? 'hairpin' : radius >= SWEEPER_WIDTHS * width ? 'sweeper' : 'corner';
+  return { shape, turn: (turn * 180) / Math.PI, swept: deg, radius };
+}
+function sectionShapes(t) {
+  const g = lapGeom(t);
+  const b = sectionBounds(t);
+  return t.sections.map((_, i) => drawnShape(g, b[i], b[i + 1], t.width ?? DEFAULT_WIDTH));
+}
+const an = (w) => (/^[aeiou]/.test(w) ? 'an' : 'a');
+/** The shapes a section type may be drawn as, from racing.json (any, for an older file without them). */
+const shapesFor = (type) => app.sectionDefs[type]?.shapes ?? ['straight', 'sweeper', 'corner', 'hairpin'];
+function shapeMismatch(t, i, d) {
+  const s = t.sections[i];
+  return app.sectionDefs[s.type] && s.type !== 'start_gate' && !shapesFor(s.type).includes(d.shape);
+}
+
+// The start straight (as trackGeom.ts startGeom): its own stretch from the start gate (its first
+// point) that joins the lap at its last point. Riders line up at the gate, ride it once on lap 1,
+// then the lap from where it joins to the finish line.
+const START_PAD = 3;
+const START_WIDEN = 1.6;
+const START_MIN = 12;
+const JOIN_MAX = 75;
+/** The grid units of the start straight the gate stands at, and where the line-up rows are. */
+const GATE_AT = 0.75;
+function startGeom(t, g = lapGeom(t)) {
+  const path = t.start?.path;
+  if (!path || path.length < 2) return null;
+  const pts = path.map(([x, y]) => ({ x, y }));
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  const total = cum.at(-1);
+  const end = pts.at(-1);
+  const near = project(g, end.x, end.y);
+  return { pts, cum, total, join: near.f, off: near.dist };
+}
+function startHalfWidth(s, u, hw) {
+  const t = clamp(u / Math.max(1e-9, s.total * 0.7), 0, 1);
+  return hw * (1 + (START_WIDEN - 1) * (1 - t * t * (3 - 2 * t)));
+}
+function startPointAt(s, u) {
+  const { pts, cum } = s;
+  if (s.total <= 0) return { ...pts[0], ang: 0 };
+  let i = 1;
+  while (i < pts.length - 1 && cum[i] < u) i++;
+  const a = pts[i - 1];
+  const b = pts[i];
+  const len = cum[i] - cum[i - 1] || 1e-9;
+  const k = (u - cum[i - 1]) / len;
+  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+function startHeadingAt(s, u, span = 1.5) {
+  const a = startPointAt(s, u - span);
+  const b = startPointAt(s, u + span);
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+/** Problems with the start straight, worded as the game's content check words them (trackCheck.ts). */
+function startProblems(t) {
+  const out = [];
+  const s = startGeom(t);
+  if (!s) return ['No start straight: every track needs a start gate on its own start straight that joins the lap. Click + Start straight.'];
+  const g = lapGeom(t);
+  const width = t.width ?? DEFAULT_WIDTH;
+  if (s.off > 0.3) out.push(`The start straight ends ${s.off.toFixed(1)} grid units off the lap; drag its last point onto the lap where it joins.`);
+  if (s.total < START_MIN) out.push(`The start straight is ${s.total.toFixed(1)} grid units long; it needs at least ${START_MIN} for the gate, the line-up and a run to the lap.`);
+  if (s.join > 0.5) out.push('The start straight joins the lap in its second half, so lap 1 would skip most of the circuit; join it nearer the start of the lap.');
+  const turn = wrapAngle(startHeadingAt(s, s.total - 0.5, 0.5) - headingAt(g, s.join));
+  if (Math.abs(turn) > (JOIN_MAX * Math.PI) / 180) out.push(`The start straight meets the lap at ${Math.round((Math.abs(turn) * 180) / Math.PI)}°; join it at ${JOIN_MAX}° or less, heading the way the lap runs.`);
+  const merge = width * 1.5 + 1;
+  for (let u = -START_PAD; u < s.total - merge; u += 0.25) {
+    const p = startPointAt(s, u);
+    const d = project(g, p.x, p.y).dist;
+    const clear = width / 2 + startHalfWidth(s, u, width / 2) + 0.5;
+    if (d < clear) {
+      out.push(`The start straight runs into the lap at ${p.x.toFixed(0)}, ${p.y.toFixed(0)}; keep it at least ${clear.toFixed(1)} grid units clear until it joins.`);
+      break;
+    }
+  }
+  return out;
+}
+/**
+ * A start straight for a track that has none: alongside the lap just after the finish line, on
+ * whichever side is clear, running onto the lap at about 45 degrees. Tries a few spots and keeps
+ * the first that passes the checks.
+ */
+function autoStart(t) {
+  const g = lapGeom(t);
+  const width = t.width ?? DEFAULT_WIDTH;
+  const off = width / 2 + (width / 2) * START_WIDEN + 1.5;
+  const run = Math.max(START_MIN + 4, width * 1.5 + 14);
+  const r1 = (v) => Math.round(v * 2) / 2;
+  for (const jf of [0.08, 0.12, 0.16, 0.05, 0.2, 0.25, 0.3, 0.35]) {
+    for (const side of [1, -1]) for (const steep of [1, 0.8]) {
+      const j = pointAt(g, jf);
+      const h = headingAt(g, jf);
+      const back = (d, o) => [r1(j.x - Math.cos(h) * d - Math.sin(h) * o * side), r1(j.y - Math.sin(h) * d + Math.cos(h) * o * side)];
+      // It runs onto the lap at about 45 degrees, so it stays clear of the lap until it merges.
+      const merge = off * steep;
+      const path = [back(run + merge, off), back(merge, off), [round1(j.x), round1(j.y)]];
+      if (path.some(([x, y]) => x < 0 || y < 0 || x > GRID_W || y > GRID_H)) continue;
+      if (!startProblems({ ...t, start: { path } }).length) return { path };
+    }
+  }
+  return null;
+}
+/**
+ * Sections that suit the drawing: the lap split into straights and bends, each bend given the
+ * plainest type its shape allows. A starting point for a new track, to rename and fill with jumps.
+ */
+function sectionsFromDrawing(t) {
+  const g = lapGeom(t);
+  const width = t.width ?? DEFAULT_WIDTH;
+  const step = 1;
+  const n = Math.max(12, Math.round(g.total / step));
+  // Bending where the heading turns more than 3 degrees a grid unit.
+  const bend = Array.from({ length: n }, (_, i) => Math.abs(wrapAngle(headingAt(g, (i + 1) / n) - headingAt(g, i / n))) / (g.total / n) > (3 * Math.PI) / 180);
+  const runs = [];
+  for (let i = 0; i < n; i++) {
+    if (runs.length && runs.at(-1).bend === bend[i]) runs.at(-1).b = i + 1;
+    else runs.push({ bend: bend[i], a: i, b: i + 1 });
+  }
+  // A short straight between two bends is part of one bend (an S or a corner of two points).
+  for (let k = runs.length - 2; k > 0; k--) {
+    if (!runs[k].bend && runs[k].b - runs[k].a < 4 && runs[k - 1].bend && runs[k + 1].bend) {
+      runs[k - 1].b = runs[k + 1].b;
+      runs.splice(k, 2);
+    }
+  }
+  const shapeOf = (r) => drawnShape(g, r.a / n, r.b / n, width).shape;
+  // Neighbours that are straights together stay one straight.
+  for (let k = runs.length - 1; k > 0; k--) {
+    const u = { a: runs[k - 1].a, b: runs[k].b };
+    if (shapeOf(runs[k - 1]) === 'straight' && shapeOf(runs[k]) === 'straight' && shapeOf(u) === 'straight') { runs[k - 1].b = u.b; runs.splice(k, 1); }
+  }
+  const typeOf = { straight: 'straight', sweeper: 'fast_sweeper', corner: 'flat_corner', hairpin: 'hairpin' };
+  const pass = { straight: 0.6, sweeper: 0.5, corner: 0.6, hairpin: 0.7 };
+  const out = runs.map((r) => {
+    const shape = shapeOf(r);
+    const type = app.sectionDefs[typeOf[shape]] || !Object.keys(app.sectionDefs).length ? typeOf[shape] : 'straight';
+    return { type, units: ((r.b - r.a) / n) * g.total, passing: pass[shape] };
+  });
+  // About 2.7 m a grid unit, as on the game's tracks.
+  return out.map((x) => ({ type: x.type, length: Math.max(5, Math.round(x.units * 2.7)), passing: x.passing }));
+}
+function patchAt(t, metres) {
+  const lap = lapLength(t);
+  return (t.patches ?? []).findIndex((p) => {
+    const end = p.at + p.length;
+    return end <= lap ? metres >= p.at && metres <= end : metres >= p.at || metres <= end - lap;
+  });
+}
+function itemBox(it) {
+  const def = sceneryDef(it.type);
+  return { w: it.w ?? def?.w ?? 2, h: it.h ?? def?.h ?? 2, a: ((it.rot ?? 0) * Math.PI) / 180 };
+}
+function itemHit(it, x, y) {
+  const { w, h, a } = itemBox(it);
+  const dx = x - it.x;
+  const dy = y - it.y;
+  const lx = dx * Math.cos(-a) - dy * Math.sin(-a);
+  const ly = dx * Math.sin(-a) + dy * Math.cos(-a);
+  return Math.abs(lx) <= w / 2 + 0.3 && Math.abs(ly) <= h / 2 + 0.3;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Drawing
+
+const canvas = $('#view');
+const ctx = canvas.getContext('2d');
+const view = { k: 1, ox: 0, oy: 0, width: 14 };
+let drawQueued = false;
+function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(draw); } }
+
+function layout() {
+  const r = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(r.width * dpr);
+  canvas.height = Math.round(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const top = 48;
+  const k = Math.min((r.width - 60) / GRID_W, (r.height - top - 30) / GRID_H);
+  view.k = Math.max(1, k);
+  view.ox = (r.width - GRID_W * view.k) / 2;
+  view.oy = top + (r.height - top - GRID_H * view.k) / 2;
+  const t = track();
+  view.width = Math.max(6, view.k * (t?.width ?? DEFAULT_WIDTH));
+}
+const toScreen = (x, y) => ({ x: view.ox + x * view.k, y: view.oy + y * view.k });
+const toGrid = (sx, sy) => ({ x: (sx - view.ox) / view.k, y: (sy - view.oy) / view.k });
+
+function strokeLap(g, from, to, color, width, cap = 'round') {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = cap;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  // The ends of the range, plus every corner of the path inside it.
+  const fs = [from, ...g.cum.slice(1, -1).map((c) => c / g.total).filter((f) => f > from && f < to), to];
+  fs.forEach((f, i) => {
+    const p = pointAt(g, Math.min(f, 0.999999));
+    const s = toScreen(p.x, p.y);
+    if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+  });
+  ctx.stroke();
+}
+
+function drawGroundCell(id, cx, cy, cell) {
+  const def = groundDef(id);
+  const s = toScreen(cx * cell, cy * cell);
+  const px = cell * view.k + 0.5;
+  const img = artImage(def?.art);
+  if (img) ctx.drawImage(img, s.x, s.y, px, px);
+  else { ctx.fillStyle = def?.color ?? '#5f8f3c'; ctx.fillRect(s.x, s.y, px, px); }
+}
+
+function drawGround(t) {
+  const g = t.ground ?? { base: app.parts.ground[0]?.id, cell: 2, paint: {} };
+  const cell = g.cell || 2;
+  const painted = new Map();
+  for (const [id, cells] of Object.entries(g.paint ?? {})) for (const [x, y] of cells) painted.set(`${x},${y}`, id);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(view.ox, view.oy, GRID_W * view.k, GRID_H * view.k);
+  ctx.clip();
+  ctx.imageSmoothingEnabled = false;
+  for (let y = 0; y < Math.ceil(GRID_H / cell); y++) for (let x = 0; x < Math.ceil(GRID_W / cell); x++) drawGroundCell(painted.get(`${x},${y}`) ?? g.base, x, y, cell);
+  ctx.restore();
+}
+
+/** Scenery with no tile art is drawn by type: simple top-down shapes in its colour. */
+function drawItem(it, sel, blocked = false) {
+  const def = sceneryDef(it.type);
+  const { w, h, a } = itemBox(it);
+  const s = toScreen(it.x, it.y);
+  const W = w * view.k;
+  const H = h * view.k;
+  const color = it.color ?? def?.color ?? '#888888';
+  ctx.save();
+  ctx.translate(s.x, s.y);
+  ctx.rotate(a);
+  ctx.fillStyle = '#00000040';
+  ctx.fillRect(-W / 2 + 2, -H / 2 + 3, W, H);
+  const img = artImage(def?.art);
+  if (img) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, -W / 2, -H / 2, W, H);
+  } else {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#00000080';
+    ctx.lineWidth = 1;
+    switch (it.type) {
+      case 'tuff_block':
+        ctx.fillRect(-W / 2, -H / 2, W, H);
+        ctx.fillStyle = '#d33a2c';
+        for (let i = 0; i < 3; i++) ctx.fillRect(-W / 2 + (W / 3) * i + W / 12, -H / 2, W / 6, H);
+        break;
+      case 'hay_bale':
+        ctx.fillRect(-W / 2, -H / 2, W, H);
+        ctx.strokeStyle = '#a07a2a';
+        for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-W / 2 + (W * i) / 4, -H / 2); ctx.lineTo(-W / 2 + (W * i) / 4, H / 2); ctx.stroke(); }
+        break;
+      case 'tyre_wall': {
+        const n = Math.max(1, Math.round(w / Math.max(0.5, h)));
+        const r = Math.min(W / n, H) / 2;
+        for (let i = 0; i < n; i++) {
+          const cx = -W / 2 + (W / n) * (i + 0.5);
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(cx, 0, r, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#55555a';
+          ctx.beginPath(); ctx.arc(cx, 0, r / 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        break;
+      }
+      case 'start_gate': {
+        ctx.fillRect(-W / 2, -H / 2, W, H * 0.35);
+        const n = Math.max(2, Math.round(w / 1.6));
+        ctx.fillStyle = '#5a5a60';
+        for (let i = 0; i < n; i++) ctx.fillRect(-W / 2 + (W / n) * i + 1, -H / 2 + H * 0.35, W / n - 2, H * 0.65);
+        break;
+      }
+      case 'stand': {
+        const steps = 5;
+        for (let i = 0; i < steps; i++) { ctx.fillStyle = i % 2 ? '#8a8f9a' : color; ctx.fillRect(-W / 2, -H / 2 + (H / steps) * i, W, H / steps); }
+        break;
+      }
+      case 'crowd': {
+        const cols = ['#c0607a', '#e0c060', '#60a0e0', '#f0f0f0', '#80c080', '#e08040'];
+        let n = 0;
+        for (let y = -H / 2 + 3; y < H / 2; y += 6) for (let x = -W / 2 + 3; x < W / 2; x += 6) { ctx.fillStyle = cols[n++ % cols.length]; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'pit_tent':
+        ctx.fillRect(-W / 2, -H / 2, W, H);
+        ctx.strokeStyle = '#ffffffa0';
+        ctx.beginPath(); ctx.moveTo(-W / 2, -H / 2); ctx.lineTo(W / 2, H / 2); ctx.moveTo(W / 2, -H / 2); ctx.lineTo(-W / 2, H / 2); ctx.stroke();
+        break;
+      case 'light_tower':
+        ctx.fillStyle = '#5a5a60'; ctx.fillRect(-W / 4, -H / 4, W / 2, H / 2);
+        ctx.fillStyle = '#fff6c0'; ctx.fillRect(-W / 2, -H / 2, W, H / 3);
+        break;
+      case 'flag_post':
+        ctx.fillStyle = '#5a5a60'; ctx.fillRect(-W / 8, -H / 2, W / 4, H);
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.moveTo(0, -H / 2); ctx.lineTo(W / 2, -H / 4); ctx.lineTo(0, 0); ctx.fill();
+        break;
+      case 'tape':
+        ctx.fillRect(-W / 2, -Math.max(1, H / 2), W, Math.max(2, H));
+        break;
+      default:
+        ctx.fillRect(-W / 2, -H / 2, W, H);
+        ctx.strokeRect(-W / 2, -H / 2, W, H);
+    }
+    const text = it.text ?? def?.text;
+    if (text && ['banner', 'sponsor_board', 'finish_arch'].includes(it.type)) {
+      ctx.fillStyle = it.type === 'finish_arch' ? '#ffffff' : contrast(color);
+      const fs = Math.max(6, Math.min(H * 0.8, (W / Math.max(4, text.length)) * 1.6));
+      ctx.font = `bold ${fs}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 1, W - 4);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+  if (blocked) {
+    // On the racing surface: riders would ride through it.
+    ctx.strokeStyle = '#ff3b30';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-W / 2 - 2, -H / 2 - 2, W + 4, H + 4);
+  }
+  if (sel) {
+    ctx.strokeStyle = '#f0a020';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(-W / 2 - 3, -H / 2 - 3, W + 6, H + 6);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+/**
+ * Scenery on the racing surface, start straight included, by index (as src/core/trackParts.ts sceneryOnTrack). Riders ride
+ * anywhere across the track, so anything there would be ridden through; start gates and finish
+ * arches (overTrack in trackParts.json) are built to stand over it.
+ */
+function sceneryOnTrack(t) {
+  const g = lapGeom(t);
+  const hw = (t.width ?? DEFAULT_WIDTH) / 2;
+  const n = Math.max(200, Math.ceil(g.total / 0.25));
+  const pts = Array.from({ length: n }, (_, i) => ({ ...pointAt(g, i / n), hw }));
+  // The start straight and the pad behind its gate are racing surface too, wider at the gate.
+  const st = startGeom(t, g);
+  if (st && st.total > 0) for (let u = -START_PAD; u <= st.total; u += 0.25) pts.push({ ...startPointAt(st, u), hw: startHalfWidth(st, u, hw) });
+  const out = [];
+  (t.scenery ?? []).forEach((it, i) => {
+    const def = sceneryDef(it.type);
+    if (!def || def.overTrack) return;
+    const w = it.w ?? def.w;
+    const d = it.h ?? def.h;
+    const a = ((it.rot ?? 0) * Math.PI) / 180;
+    const reach = Math.hypot(w, d) / 2;
+    const near = pts.filter((p) => Math.hypot(p.x - it.x, p.y - it.y) < reach + p.hw);
+    if (!near.length) return;
+    for (let u = -0.5; u <= 0.5001; u += 0.1) {
+      for (let v = -0.5; v <= 0.5001; v += 0.25) {
+        const x = it.x + u * w * Math.cos(a) - v * d * Math.sin(a);
+        const y = it.y + u * w * Math.sin(a) + v * d * Math.cos(a);
+        if (near.some((p) => Math.hypot(p.x - x, p.y - y) < p.hw - 1e-6)) {
+          out.push(i);
+          return;
+        }
+      }
+    }
+  });
+  return out;
+}
+function contrast(hex) {
+  const c = hex.replace('#', '');
+  const v = c.length <= 4 ? c.split('').slice(0, 3).map((x) => parseInt(x + x, 16)) : [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16));
+  return v[0] * 0.3 + v[1] * 0.59 + v[2] * 0.11 > 150 ? '#14141e' : '#ffffff';
+}
+
+function draw() {
+  drawQueued = false;
+  layout();
+  const r = canvas.getBoundingClientRect();
+  ctx.clearRect(0, 0, r.width, r.height);
+  const t = track();
+  if (!t) return;
+  const { k, ox, oy, width } = view;
+  const scene = $('#showScene').checked;
+
+  ctx.fillStyle = '#4f7a32';
+  ctx.fillRect(ox - 10, oy - 10, GRID_W * k + 20, GRID_H * k + 20);
+  if (scene || app.mode === 'ground') drawGround(t);
+  else { ctx.fillStyle = '#5f8f3c'; ctx.fillRect(ox, oy, GRID_W * k, GRID_H * k); }
+
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= GRID_W; x += 5) {
+    ctx.strokeStyle = x % 10 ? '#ffffff0c' : '#ffffff1c';
+    ctx.beginPath(); ctx.moveTo(ox + x * k + 0.5, oy); ctx.lineTo(ox + x * k + 0.5, oy + GRID_H * k); ctx.stroke();
+  }
+  for (let y = 0; y <= GRID_H; y += 5) {
+    ctx.strokeStyle = y % 10 ? '#ffffff0c' : '#ffffff1c';
+    ctx.beginPath(); ctx.moveTo(ox, oy + y * k + 0.5); ctx.lineTo(ox + GRID_W * k, oy + y * k + 0.5); ctx.stroke();
+  }
+  ctx.fillStyle = '#ffffff55';
+  ctx.font = '10px system-ui, sans-serif';
+  for (let x = 0; x <= GRID_W; x += 10) ctx.fillText(String(x), ox + x * k + 2, oy + GRID_H * k + 20);
+  for (let y = 10; y <= GRID_H; y += 10) ctx.fillText(String(y), ox - 24, oy + y * k + 3);
+
+  if (t.path.length < 2) return;
+  const g = lapGeom(t);
+  const pathLine = (color, wd) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = wd;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    g.pts.forEach((p, i) => { const s = toScreen(p.x, p.y); if (i) ctx.lineTo(s.x, s.y); else ctx.moveTo(s.x, s.y); });
+    ctx.stroke();
+  };
+  const st = startGeom(t, g);
+  // The start straight, wider at the gate, with the concrete pad behind the gate.
+  const startStrip = (from, to, color, extra) => {
+    if (!st) return;
+    for (let u = from; u < to - 1e-6; u += 0.25) {
+      const a = startPointAt(st, u);
+      const b = startPointAt(st, Math.min(to, u + 0.25));
+      const sa = toScreen(a.x, a.y);
+      const sb = toScreen(b.x, b.y);
+      ctx.strokeStyle = color;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = (2 * startHalfWidth(st, u, (t.width ?? DEFAULT_WIDTH) / 2) * k) + extra;
+      ctx.beginPath(); ctx.moveTo(sa.x, sa.y); ctx.lineTo(sb.x, sb.y); ctx.stroke();
+    }
+  };
+  if (st) startStrip(-START_PAD, st.total, DIRT_EDGE, 6);
+  pathLine(DIRT_EDGE, width + 6);
+  if (st) {
+    startStrip(-START_PAD, st.total, DIRT, 0);
+    startStrip(-START_PAD, GATE_AT + 0.15, '#a8a49a', 0);
+  }
+  pathLine(DIRT, width);
+
+  // Surface patches on the track.
+  const lap = lapLength(t) || 1;
+  (t.patches ?? []).forEach((p, i) => {
+    const col = surfaceDef(p.surface)?.color ?? '#888888';
+    const a = p.at / lap;
+    const b = (p.at + p.length) / lap;
+    const seg = (x, y, c, wd) => strokeLap(g, x, y, c, wd, 'butt');
+    const ends = b <= 1 ? [[a, b]] : [[a, 1], [0, b - 1]];
+    for (const [x, y] of ends) seg(x, y, col + (app.mode === 'surface' ? 'ee' : 'c0'), width * 0.92);
+    if (app.mode === 'surface' && i === app.selPatch) for (const [x, y] of ends) seg(x, y, '#f0a020', 2);
+  });
+
+  // Sections as a coloured stripe down the middle, the selected one wider (development only).
+  // A section whose type doesn't suit the shape it's drawn on is edged in red.
+  const bounds = sectionBounds(t);
+  if (!app.final && app.mode === 'layout') {
+    const shapes = sectionShapes(t);
+    t.sections.forEach((s, i) => {
+      const sel = i === app.selSec;
+      if (shapeMismatch(t, i, shapes[i])) strokeLap(g, bounds[i], bounds[i + 1], '#ff3030', width * 0.95, 'butt');
+      strokeLap(g, bounds[i], bounds[i + 1], colorOf(s.type) + (sel ? 'ff' : 'b0'), sel ? width * 0.6 : Math.max(3, width * 0.22));
+    });
+  }
+
+  // Jumps as dark bars across the track, as on the race screen; higher jumps are thicker.
+  bounds.slice(0, -1).forEach((b0, i) => {
+    const s = t.sections[i];
+    if (!JUMPS.has(s.type)) return;
+    const n = s.type === 'rhythm' || s.type === 'whoops' ? 3 : 1;
+    for (let j = 0; j < n; j++) {
+      const p = pointAt(g, b0 + ((bounds[i + 1] - b0) * (j + 1)) / (n + 1));
+      const sp = toScreen(p.x, p.y);
+      const a = p.ang + Math.PI / 2;
+      ctx.strokeStyle = '#3a2410';
+      ctx.lineWidth = 3 + Math.min(6, (s.height ?? 1.5) * 1.5);
+      ctx.beginPath();
+      ctx.moveTo(sp.x - Math.cos(a) * width * 0.55, sp.y - Math.sin(a) * width * 0.55);
+      ctx.lineTo(sp.x + Math.cos(a) * width * 0.55, sp.y + Math.sin(a) * width * 0.55);
+      ctx.stroke();
+    }
+  });
+
+  // Direction arrows.
+  for (let f = 0.04; f < 1; f += 0.08) {
+    const p = pointAt(g, f);
+    const s = toScreen(p.x, p.y);
+    const a = p.ang;
+    const sz = Math.max(4, width * 0.28);
+    ctx.fillStyle = '#00000070';
+    ctx.beginPath();
+    ctx.moveTo(s.x + Math.cos(a) * sz, s.y + Math.sin(a) * sz);
+    ctx.lineTo(s.x + Math.cos(a + 2.5) * sz, s.y + Math.sin(a + 2.5) * sz);
+    ctx.lineTo(s.x + Math.cos(a - 2.5) * sz, s.y + Math.sin(a - 2.5) * sz);
+    ctx.fill();
+  }
+
+  // Chequered start and finish line.
+  {
+    const p = pointAt(g, 0);
+    const s = toScreen(p.x, p.y);
+    const a = p.ang + Math.PI / 2;
+    const cells = 6;
+    const cs = Math.max(4, width / 4);
+    for (let i = 0; i < cells; i++) {
+      for (let j = 0; j < 2; j++) {
+        const o = (i / (cells - 1) - 0.5) * (width + 4);
+        const cx = s.x + Math.cos(a) * o + Math.cos(a - Math.PI / 2) * (j - 0.5) * cs;
+        const cy = s.y + Math.sin(a) * o + Math.sin(a - Math.PI / 2) * (j - 0.5) * cs;
+        ctx.fillStyle = (i + j) % 2 ? '#ffffff' : '#14141e';
+        ctx.fillRect(cx - cs / 2, cy - cs / 2, cs, cs);
+      }
+    }
+  }
+
+  // The start gate across the start straight, and the riders' line-up behind it.
+  if (st) {
+    const hw = (t.width ?? DEFAULT_WIDTH) / 2;
+    const p = startPointAt(st, GATE_AT);
+    const a = startHeadingAt(st, GATE_AT) + Math.PI / 2;
+    const half = startHalfWidth(st, GATE_AT, hw) * 1.1;
+    const s1 = toScreen(p.x + Math.cos(a) * half, p.y + Math.sin(a) * half);
+    const s2 = toScreen(p.x - Math.cos(a) * half, p.y - Math.sin(a) * half);
+    ctx.strokeStyle = '#14141e';
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = Math.max(3, k * 0.45);
+    ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+    const gates = Math.max(1, t.gates?.length || 16);
+    const perRow = Math.ceil(gates / 2);
+    for (let i = 0; i < gates; i++) {
+      const row = Math.floor(i / perRow);
+      const u = GATE_AT - 0.6 - row * 1.4;
+      const q = startPointAt(st, u);
+      const qa = startHeadingAt(st, u) + Math.PI / 2;
+      const w = startHalfWidth(st, u, hw) * 0.9;
+      const o = perRow > 1 ? -w + (2 * w * (i % perRow)) / (perRow - 1) : 0;
+      const sq = toScreen(q.x + Math.cos(qa) * o, q.y + Math.sin(qa) * o);
+      ctx.fillStyle = '#ffd400';
+      ctx.strokeStyle = '#14141e';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sq.x, sq.y, Math.max(2, k * 0.28), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  // Scenery.
+  ctx.globalAlpha = scene || app.mode === 'scenery' ? 1 : 0.25;
+  const blocked = new Set(sceneryOnTrack(t));
+  (t.scenery ?? []).forEach((it, i) => drawItem(it, app.mode === 'scenery' && i === app.selItem, blocked.has(i)));
+  ctx.globalAlpha = 1;
+
+  if (app.mode === 'layout') {
+    if (!app.final && app.selSec >= 0 && t.sections[app.selSec]) {
+      const s = t.sections[app.selSec];
+      const c = pointAt(g, (bounds[app.selSec] + bounds[app.selSec + 1]) / 2);
+      const sp = toScreen(c.x, c.y);
+      label(app.sectionDefs[s.type]?.name ?? s.type, sp.x, sp.y - width - 6);
+    }
+    t.path.forEach(([x, y], i) => {
+      const s = toScreen(x, y);
+      const sel = i === app.selPt;
+      ctx.fillStyle = sel ? '#f0a020' : i === 0 ? '#ffffff' : '#1f2229';
+      ctx.strokeStyle = sel ? '#ffffff' : '#f0a020';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, sel ? 7 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      if (sel) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.fillText(String(i), s.x + 8, s.y - 8);
+      }
+    });
+    // Start straight points: blue squares, the gate end labelled, the last one on the lap.
+    (t.start?.path ?? []).forEach(([x, y], i, all) => {
+      const s = toScreen(x, y);
+      const sel = i === app.selStart;
+      const r = sel ? 7 : 5;
+      ctx.fillStyle = sel ? '#f0a020' : i === all.length - 1 ? '#ffffff' : '#2f7fe0';
+      ctx.strokeStyle = sel ? '#ffffff' : '#14141e';
+      ctx.lineWidth = 2;
+      ctx.fillRect(s.x - r, s.y - r, r * 2, r * 2);
+      ctx.strokeRect(s.x - r, s.y - r, r * 2, r * 2);
+      if (i === 0) label('Start gate', s.x, s.y - 14);
+    });
+    // Section boundary handles (the finish line is fixed at point 0).
+    if (!app.final) {
+      for (let i = 1; i < t.sections.length; i++) {
+        const p = pointAt(g, bounds[i]);
+        const s = toScreen(p.x, p.y);
+        ctx.fillStyle = app.hoverBound === i ? '#f0a020' : '#ffffff';
+        ctx.strokeStyle = '#14141e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - 7); ctx.lineTo(s.x + 7, s.y); ctx.lineTo(s.x, s.y + 7); ctx.lineTo(s.x - 7, s.y); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+      }
+    }
+  }
+
+  // Ground brush outline and rectangle.
+  if (app.mode === 'ground' && app.hoverCell && !app.rect) {
+    const cell = t.ground?.cell ?? 2;
+    const n = Number($('#gBrush').value);
+    const s = toScreen((app.hoverCell.x - Math.floor((n - 1) / 2)) * cell, (app.hoverCell.y - Math.floor((n - 1) / 2)) * cell);
+    ctx.strokeStyle = '#ffffffc0';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(s.x, s.y, n * cell * k, n * cell * k);
+  }
+  if (app.rect) {
+    const cell = t.ground?.cell ?? 2;
+    const [x0, y0, x1, y1] = rectCells(app.rect);
+    const s = toScreen(x0 * cell, y0 * cell);
+    ctx.strokeStyle = '#f0a020';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(s.x, s.y, (x1 - x0 + 1) * cell * k, (y1 - y0 + 1) * cell * k);
+  }
+
+  // Preview rider.
+  if (app.play) {
+    const p = pointAt(g, app.play.f);
+    const s = toScreen(p.x, p.y);
+    ctx.fillStyle = '#ff8a1e';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+}
+
+function label(text, x, y) {
+  ctx.font = '12px system-ui, sans-serif';
+  const w = ctx.measureText(text).width + 10;
+  ctx.fillStyle = '#000000b0';
+  ctx.beginPath(); ctx.roundRect(x - w / 2, y - 16, w, 18, 4); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, x - w / 2 + 5, y - 3);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Panels
+
+function setMode(mode) {
+  app.mode = mode;
+  for (const b of document.querySelectorAll('#modes button')) b.classList.toggle('on', b.dataset.mode === mode);
+  for (const p of document.querySelectorAll('.pane')) p.classList.toggle('show', p.id === `pane-${mode}`);
+  for (const id of ['#btnInsert', '#btnDelPt', '#btnRound', '#btnStart', '#btnReverse', '#btnFit']) $(id).style.display = mode === 'layout' ? '' : 'none';
+  app.hoverCell = null;
+  refresh();
+}
+
+function refresh() {
+  const t = track();
+  const has = !!app.data;
+  for (const id of ['#btnNew', '#btnImport']) $(id).disabled = !has;
+  for (const id of ['#btnDup', '#btnDel', '#btnExport', '#btnAddSec', '#btnReverse', '#btnFit', '#btnPlay']) $(id).disabled = !t;
+  $('#btnSave').disabled = !has;
+  $('#btnDownload').disabled = !has;
+  $('#btnUndo').disabled = !app.undo.length;
+  $('#btnRedo').disabled = !app.redo.length;
+  if (t) {
+    $('#btnDel').disabled = app.data.tracks.length <= 1;
+    $('#btnSplitSec').disabled = app.selSec < 0;
+    for (const id of ['#btnDelPt', '#btnRound', '#btnStart', '#btnInsert']) $(id).disabled = app.selPt < 0;
+    if (t.path.length <= 3) $('#btnDelPt').disabled = true;
+    if (app.selStart >= 0) { $('#btnInsert').disabled = false; $('#btnDelPt').disabled = t.start.path.length <= 2 || app.selStart === t.start.path.length - 1; }
+    $('#btnAddStart').disabled = !!t.start;
+    $('#btnFitSecs').disabled = false;
+    if (app.selPt === 0) $('#btnStart').disabled = true;
+  }
+  $('#btnPlay').textContent = app.play ? '■ Stop' : '▶ Preview';
+  $('#btnPlay').classList.toggle('on', !!app.play);
+  if (!has) return;
+  renderTrackList();
+  renderProps();
+  if (app.mode === 'layout') { renderSections(); renderSectionDetail(); }
+  if (app.mode === 'surface') renderPatches();
+  if (app.mode === 'ground') renderGroundPane();
+  if (app.mode === 'scenery') renderSceneryDetail();
+  renderStats();
+  renderChecks();
+  requestDraw();
+}
+
+function venuesUsing(id) { return (app.data.venues ?? []).filter((v) => v.track === id); }
+
+function renderTrackList() {
+  const list = $('#trackList');
+  list.innerHTML = '';
+  app.data.tracks.forEach((t, i) => {
+    const d = document.createElement('div');
+    d.className = i === app.cur ? 'active' : '';
+    const kind = app.parts.kinds.find((k) => k.id === (t.kind ?? 'outdoor'))?.name ?? t.kind;
+    d.innerHTML = '<b></b><br><small></small>';
+    d.querySelector('b').textContent = t.name || t.id;
+    d.querySelector('small').textContent = `${t.id} · ${kind} · ${lapLength(t)} m${t.practiceOnly ? ' · practice' : ''}${venuesUsing(t.id).length ? '' : ' · no venue'}`;
+    d.addEventListener('click', () => { app.cur = i; deselect(); stopPlay(); refresh(); });
+    list.appendChild(d);
+  });
+}
+
+function setOptions(listId, values) {
+  const dl = $(listId);
+  dl.innerHTML = '';
+  for (const v of [...new Set(values)].sort()) { const o = document.createElement('option'); o.value = v; dl.appendChild(o); }
+}
+function fillSelect(sel, items, value) {
+  sel.innerHTML = '';
+  for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; sel.appendChild(o); }
+  sel.value = value;
+}
+
+function renderProps() {
+  const t = track();
+  for (const id of ['#fId', '#fName', '#fKind', '#fWidth', '#fSize', '#fSurface', '#fGates', '#fPractice']) $(id).disabled = !t;
+  if (!t) return;
+  const active = document.activeElement;
+  const set = (id, v) => { if (active !== $(id)) $(id).value = v; };
+  set('#fId', t.id);
+  set('#fName', t.name);
+  set('#fSize', t.size);
+  set('#fSurface', t.surface);
+  set('#fGates', (t.gates ?? []).join(', '));
+  set('#fWidth', String(t.width ?? DEFAULT_WIDTH));
+  fillSelect($('#fKind'), app.parts.kinds, t.kind ?? 'outdoor');
+  $('#fPractice').checked = !!t.practiceOnly;
+  setOptions('#sizes', ['practice', 'small', 'medium', 'large', ...app.data.tracks.map((x) => x.size)]);
+  setOptions('#surfaces', ['hard_pack', 'loam', 'sand', 'clay', 'mud', ...app.data.tracks.map((x) => x.surface)]);
+  $('#kindInfo').textContent = app.parts.kinds.find((k) => k.id === (t.kind ?? 'outdoor'))?.desc ?? '';
+  const used = venuesUsing(t.id);
+  $('#venueInfo').textContent = used.length ? `Used by: ${used.map((v) => v.name).join(', ')}.` : 'No venue uses this track yet. Add one to the venues list in tracks.json to ride it in the game.';
+}
+
+$('#fName').addEventListener('change', (e) => commit((t) => { t.name = e.target.value.trim(); }));
+$('#fSize').addEventListener('change', (e) => commit((t) => { t.size = e.target.value.trim(); }));
+$('#fSurface').addEventListener('change', (e) => commit((t) => { t.surface = e.target.value.trim(); }));
+$('#fKind').addEventListener('change', (e) => commit((t) => setKeyNear(t, 'kind', e.target.value, 'surface')));
+$('#fWidth').addEventListener('change', (e) => commit((t) => {
+  const v = Number(e.target.value);
+  if (!(v >= 1 && v <= 12)) { status('Width is between 1 and 12 grid units.', 'err'); return; }
+  if (t.width === undefined && Math.abs(v - DEFAULT_WIDTH) < 1e-9) return;
+  setKeyNear(t, 'width', round1(v), 'kind' in t ? 'kind' : 'surface');
+}));
+$('#fId').addEventListener('change', (e) => commit((t) => {
+  const id = e.target.value.trim();
+  if (!ID.test(id)) { status('An id uses only a-z, 0-9, dots, dashes and underscores.', 'err'); return; }
+  if (app.data.tracks.some((x) => x !== t && x.id === id)) { status(`There is already a track "${id}".`, 'err'); return; }
+  for (const v of venuesUsing(t.id)) v.track = id;
+  t.id = id;
+}));
+$('#fGates').addEventListener('change', (e) => commit((t) => {
+  const raw = e.target.value.trim();
+  if (!raw) { delete t.gates; return; }
+  const nums = raw.split(/[\s,]+/).filter(Boolean).map(Number);
+  if (nums.some((n) => !Number.isFinite(n))) { status('Gates are numbers separated by commas, like 3, 2, 1, 0, -1.', 'err'); return; }
+  setKeyNear(t, 'gates', nums, 'path', true);
+}));
+$('#fPractice').addEventListener('change', (e) => commit((t) => {
+  if (e.target.checked) setKeyNear(t, 'practiceOnly', true, 'surface'); else delete t.practiceOnly;
+}));
+
+/** Sets a key, placing a new one next to another, so the file keeps its field order. */
+function setKeyNear(o, key, value, anchor, before = false) {
+  if (key in o) { o[key] = value; return; }
+  const entries = Object.entries(o);
+  const at = entries.findIndex(([k]) => k === anchor);
+  entries.splice(at < 0 ? entries.length : at + (before ? 0 : 1), 0, [key, value]);
+  for (const k of Object.keys(o)) delete o[k];
+  Object.assign(o, Object.fromEntries(entries));
+}
+
+function sectionTypes() {
+  const types = Object.keys(app.sectionDefs);
+  for (const s of track()?.sections ?? []) if (!types.includes(s.type)) types.push(s.type);
+  return types;
+}
+
+function renderSections() {
+  const t = track();
+  const box = $('#sections');
+  box.innerHTML = '';
+  if (!t || app.final) return;
+  $('#secCount').textContent = `(${t.sections.length})`;
+  const types = sectionTypes();
+  const shapes = sectionShapes(t);
+  t.sections.forEach((s, i) => {
+    const row = document.createElement('div');
+    const off = shapeMismatch(t, i, shapes[i]);
+    row.className = `sec${i === app.selSec ? ' active' : ''}${off ? ' off' : ''}`;
+    row.title = `Drawn as ${an(shapes[i].shape)} ${shapes[i].shape} (turns ${Math.round(shapes[i].swept)}°)${off ? `: ${app.sectionDefs[s.type].name.toLowerCase()} needs ${shapesFor(s.type).join(' or ')}` : ''}`;
+    const sw = document.createElement('div');
+    sw.className = 'sw';
+    sw.style.background = colorOf(s.type);
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(i + 1);
+    const sel = document.createElement('select');
+    for (const ty of types) {
+      const o = document.createElement('option');
+      o.value = ty;
+      o.textContent = app.sectionDefs[ty]?.name ?? `${ty} (unknown)`;
+      sel.appendChild(o);
+    }
+    sel.value = s.type;
+    const def = app.sectionDefs[s.type];
+    sel.title = def ? `Difficulty ${def.diff}. Skills: ${Object.keys(def.skills).join(', ')}. Damages: ${def.damage}.` : '';
+    sel.addEventListener('change', () => editSection(i, (x) => {
+      x.type = sel.value;
+      if (!HEIGHTS.has(x.type)) delete x.height;
+    }));
+    const len = document.createElement('input');
+    len.type = 'number'; len.min = '1'; len.step = '5'; len.value = String(s.length);
+    len.addEventListener('change', () => editSection(i, (x) => { const v = Number(len.value); if (v >= 1) x.length = Math.round(v); }));
+    const pass = document.createElement('input');
+    pass.type = 'number'; pass.min = '0'; pass.max = '1'; pass.step = '0.1'; pass.value = String(s.passing);
+    pass.addEventListener('change', () => editSection(i, (x) => { const v = Number(pass.value); if (v >= 0 && v <= 1) x.passing = Math.round(v * 100) / 100; }));
+    const btns = document.createElement('div');
+    btns.className = 'btns';
+    const mk = (txt, title, fn, dis) => { const b = document.createElement('button'); b.textContent = txt; b.title = title; b.disabled = !!dis; b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); btns.appendChild(b); };
+    mk('↑', 'Move up', () => moveSection(i, -1), i === 0);
+    mk('↓', 'Move down', () => moveSection(i, 1), i === t.sections.length - 1);
+    mk('✕', 'Delete', () => deleteSection(i), t.sections.length <= 1);
+    row.append(sw, n, sel, len, pass, btns);
+    row.addEventListener('mousedown', () => { if (app.selSec !== i) { app.selSec = i; refreshLight(); } });
+    box.appendChild(row);
+  });
+}
+/** Re-highlights the selected section without rebuilding the inputs being typed in. */
+function refreshLight() {
+  [...$('#sections').children].forEach((r, i) => r.classList.toggle('active', i === app.selSec));
+  $('#btnSplitSec').disabled = app.selSec < 0;
+  renderSectionDetail();
+  requestDraw();
+}
+
+/** The selected section's racing line and jump height. */
+function renderSectionDetail() {
+  const box = $('#secDetail');
+  box.innerHTML = '';
+  const t = track();
+  const s = t?.sections[app.selSec];
+  if (!s || app.final) { box.innerHTML = '<div class="hint">Select a section to set its racing line and jump height.</div>'; return; }
+  const def = app.sectionDefs[s.type];
+  const head = document.createElement('div');
+  head.innerHTML = '<b></b> <span class="hint"></span>';
+  head.querySelector('b').textContent = `Section ${app.selSec + 1}: ${def?.name ?? s.type}`;
+  head.querySelector('.hint').textContent = def ? `difficulty ${def.diff}, damages ${def.damage}` : '';
+  box.appendChild(head);
+  const d = sectionShapes(t)[app.selSec];
+  const shape = document.createElement('div');
+  const off = shapeMismatch(t, app.selSec, d);
+  shape.className = off ? 'bad' : 'hint';
+  if (off) shape.style.color = '#f0a0a0';
+  shape.textContent = `Drawn as ${an(d.shape)} ${d.shape}: turns ${Math.round(d.swept)}°${Number.isFinite(d.radius) ? `, tightest radius ${d.radius.toFixed(1)}` : ''}. ${def ? `${def.name} suits ${shapesFor(s.type).join(', ')}.` : ''}`;
+  box.appendChild(shape);
+  const field = (labelText, el) => { const f = document.createElement('div'); f.className = 'field'; const l = document.createElement('label'); l.textContent = labelText; f.append(l, el); box.appendChild(f); return el; };
+  const sel = document.createElement('select');
+  fillSelect(sel, [{ id: '', name: 'Any (riders choose)' }, ...app.parts.lines.map((l) => ({ id: l, name: l[0].toUpperCase() + l.slice(1) }))], s.line ?? '');
+  sel.title = 'The line most riders take through this section on the race screen';
+  sel.addEventListener('change', () => editSection(app.selSec, (x) => { if (sel.value) x.line = sel.value; else delete x.line; }));
+  field('Line', sel);
+  if (HEIGHTS.has(s.type)) {
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = '0'; inp.max = '12'; inp.step = '0.5';
+    inp.value = s.height === undefined ? '' : String(s.height);
+    inp.placeholder = 'default';
+    inp.title = 'Height in metres of the jump face or hill, for the race screen';
+    inp.addEventListener('change', () => editSection(app.selSec, (x) => { const v = Number(inp.value); if (inp.value !== '' && v >= 0) x.height = v; else delete x.height; }));
+    field('Height', inp);
+  }
+}
+
+function editSection(i, fn) { commit((t) => fn(t.sections[i])); }
+function moveSection(i, d) {
+  commit((t) => {
+    [t.sections[i], t.sections[i + d]] = [t.sections[i + d], t.sections[i]];
+    app.selSec = i + d;
+  });
+}
+function deleteSection(i) {
+  commit((t) => {
+    t.sections.splice(i, 1);
+    app.selSec = Math.min(i, t.sections.length - 1);
+  });
+}
+function addSection() {
+  commit((t) => {
+    const at = app.selSec >= 0 ? app.selSec + 1 : t.sections.length;
+    t.sections.splice(at, 0, { type: 'straight', length: 50, passing: 0.5 });
+    app.selSec = at;
+  });
+}
+function splitSection() {
+  const t = track();
+  const s = t?.sections[app.selSec];
+  if (!s) return;
+  if (s.length < 2) { status('A section needs at least 2 metres to split.', 'err'); return; }
+  commit(() => {
+    const a = Math.ceil(s.length / 2);
+    t.sections.splice(app.selSec + 1, 0, { ...s, length: s.length - a });
+    s.length = a;
+  });
+}
+
+// ---- palettes ----
+
+function swatch(drawFn) {
+  const c = document.createElement('canvas');
+  c.width = 44; c.height = 44;
+  drawFn(c.getContext('2d'));
+  return c;
+}
+function buildPalettes() {
+  const mk = (box, items, cur, drawFn, pick) => {
+    box.innerHTML = '';
+    for (const it of items) {
+      const b = document.createElement('button');
+      b.className = it.id === cur ? 'sel' : '';
+      b.title = it.name;
+      b.append(swatch((g) => drawFn(g, it)), it.name);
+      b.addEventListener('click', () => { pick(it.id); buildPalettes(); });
+      box.appendChild(b);
+    }
+    if (!items.length) box.innerHTML = '<div class="hint">Nothing to pick: trackParts.json has none.</div>';
+  };
+  mk($('#surfacePal'), app.parts.surfaces, app.surfaceBrush, (g, it) => {
+    g.fillStyle = DIRT; g.fillRect(0, 0, 44, 44);
+    g.fillStyle = it.color; g.fillRect(4, 11, 36, 22);
+  }, (id) => { app.surfaceBrush = id; });
+  mk($('#groundPal'), app.parts.ground, app.groundBrush, (g, it) => {
+    const img = artImage(it.art);
+    g.imageSmoothingEnabled = false;
+    if (img) g.drawImage(img, 0, 0, 44, 44); else { g.fillStyle = it.color; g.fillRect(0, 0, 44, 44); }
+  }, (id) => { app.groundBrush = id; });
+  mk($('#sceneryPal'), app.parts.scenery, app.sceneryBrush, (g, it) => {
+    const img = artImage(it.art);
+    g.imageSmoothingEnabled = false;
+    if (img) { const r = Math.min(40 / img.width, 40 / img.height); g.drawImage(img, 22 - (img.width * r) / 2, 22 - (img.height * r) / 2, img.width * r, img.height * r); return; }
+    const r = Math.min(40 / it.w, 40 / it.h);
+    g.fillStyle = it.color;
+    g.fillRect(22 - (it.w * r) / 2, 22 - (it.h * r) / 2, it.w * r, Math.max(3, it.h * r));
+    if (it.text) { g.fillStyle = contrast(it.color); g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(it.text, 22, 22, 40); }
+  }, (id) => { app.sceneryBrush = id; app.selItem = -1; refresh(); });
+}
+
+// ---- surfaces ----
+
+function renderPatches() {
+  const t = track();
+  const box = $('#patches');
+  box.innerHTML = '';
+  if (!t) return;
+  const list = t.patches ?? [];
+  if (!list.length) { box.innerHTML = '<div class="hint">No patches yet.</div>'; return; }
+  list.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = `patch${i === app.selPatch ? ' active' : ''}`;
+    const sw = document.createElement('div');
+    sw.className = 'sw';
+    sw.style.background = surfaceDef(p.surface)?.color ?? '#888888';
+    const sel = document.createElement('select');
+    const options = app.parts.surfaces.some((s) => s.id === p.surface) ? app.parts.surfaces : [...app.parts.surfaces, { id: p.surface, name: `${p.surface} (unknown)` }];
+    fillSelect(sel, options, p.surface);
+    sel.addEventListener('change', () => commit((t) => { t.patches[i].surface = sel.value; }));
+    const at = document.createElement('input');
+    at.type = 'number'; at.min = '0'; at.step = '5'; at.value = String(p.at);
+    at.addEventListener('change', () => commit((t) => { const v = Number(at.value); if (v >= 0) t.patches[i].at = Math.round(v) % Math.max(1, lapLength(t)); }));
+    const len = document.createElement('input');
+    len.type = 'number'; len.min = '1'; len.step = '5'; len.value = String(p.length);
+    len.addEventListener('change', () => commit((t) => { const v = Number(len.value); if (v >= 1) t.patches[i].length = Math.round(v); }));
+    const btns = document.createElement('div');
+    btns.className = 'btns';
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.title = 'Delete';
+    del.addEventListener('click', () => deletePatch(i));
+    btns.appendChild(del);
+    row.append(sw, sel, at, len, btns);
+    row.addEventListener('mousedown', () => { app.selPatch = i; [...box.children].forEach((r, j) => r.classList.toggle('active', j === i)); requestDraw(); });
+    box.appendChild(row);
+  });
+}
+function addPatch(metres) {
+  if (!app.surfaceBrush) { status('Pick a surface first.', 'err'); return; }
+  commit((t) => {
+    const lap = lapLength(t);
+    const len = Math.min(25, Math.max(5, Math.round(lap / 30)));
+    if (!t.patches) setKeyNear(t, 'patches', [], 'sections');
+    t.patches.push({ surface: app.surfaceBrush, at: Math.max(0, Math.round(metres - len / 2)) % lap, length: len });
+    app.selPatch = t.patches.length - 1;
+  });
+}
+function deletePatch(i) {
+  commit((t) => {
+    if (!t.patches?.[i]) return;
+    t.patches.splice(i, 1);
+    if (!t.patches.length) delete t.patches;
+    app.selPatch = -1;
+  });
+}
+
+// ---- ground ----
+
+function ensureGround(t) {
+  if (!t.ground) setKeyNear(t, 'ground', { base: app.parts.ground[0]?.id ?? 'grass', cell: 2, paint: {} }, 'patches' in t ? 'patches' : 'sections');
+  return t.ground;
+}
+function renderGroundPane() {
+  const t = track();
+  if (!t) return;
+  fillSelect($('#gBase'), app.parts.ground, t.ground?.base ?? app.parts.ground[0]?.id);
+}
+$('#gBase').addEventListener('change', (e) => commit((t) => { ensureGround(t).base = e.target.value; }));
+/** Sets ground cells (a null id puts the base back). Keeps each ground's cell list sorted. */
+function paintCells(t, cells, id) {
+  const g = ensureGround(t);
+  const cols = Math.ceil(GRID_W / g.cell);
+  const rows = Math.ceil(GRID_H / g.cell);
+  const keys = new Set(cells.filter(([x, y]) => x >= 0 && y >= 0 && x < cols && y < rows).map(([x, y]) => `${x},${y}`));
+  for (const k of Object.keys(g.paint)) {
+    g.paint[k] = g.paint[k].filter(([x, y]) => !keys.has(`${x},${y}`));
+    if (!g.paint[k].length) delete g.paint[k];
+  }
+  if (id && id !== g.base) {
+    const list = (g.paint[id] ??= []);
+    for (const k of keys) list.push(k.split(',').map(Number));
+    list.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  }
+}
+function brushCells(cx, cy) {
+  const n = Number($('#gBrush').value);
+  const out = [];
+  const x0 = cx - Math.floor((n - 1) / 2);
+  const y0 = cy - Math.floor((n - 1) / 2);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) out.push([x0 + x, y0 + y]);
+  return out;
+}
+function rectCells(r) { return [Math.min(r.x0, r.x1), Math.min(r.y0, r.y1), Math.max(r.x0, r.x1), Math.max(r.y0, r.y1)]; }
+$('#btnClearGround').addEventListener('click', () => commit((t) => { if (t.ground) t.ground.paint = {}; }));
+/** Paints the chosen ground under the track and a little either side, as a starting point. */
+$('#btnAutoGround').addEventListener('click', () => commit((t) => {
+  const g = ensureGround(t);
+  const under = app.groundBrush;
+  if (!under) { status('Pick a ground first.', 'err'); return; }
+  const geom = lapGeom(t);
+  const half = (t.width ?? DEFAULT_WIDTH) / 2 + 1;
+  const cells = [];
+  for (let y = 0; y < Math.ceil(GRID_H / g.cell); y++) {
+    for (let x = 0; x < Math.ceil(GRID_W / g.cell); x++) {
+      if (project(geom, (x + 0.5) * g.cell, (y + 0.5) * g.cell).dist <= half) cells.push([x, y]);
+    }
+  }
+  paintCells(t, cells, under);
+  status(`Painted ${groundDef(under)?.name ?? under} under the track. Pick another ground and paint round it.`, 'ok');
+}));
+
+// ---- scenery ----
+
+function renderSceneryDetail() {
+  const box = $('#sceneryDetail');
+  box.innerHTML = '';
+  const t = track();
+  const it = t?.scenery?.[app.selItem];
+  if (!it) {
+    const def = sceneryDef(app.sceneryBrush);
+    box.innerHTML = '<div class="hint"></div>';
+    box.firstChild.textContent = `${def ? `Click the ground to place a ${def.name.toLowerCase()}. ` : 'Pick an item above. '}${(t?.scenery ?? []).length} items on this track.`;
+    return;
+  }
+  const def = sceneryDef(it.type);
+  const head = document.createElement('div');
+  head.innerHTML = '<b></b>';
+  head.querySelector('b').textContent = def?.name ?? it.type;
+  box.appendChild(head);
+  const field = (labelText, el) => { const f = document.createElement('div'); f.className = 'field'; const l = document.createElement('label'); l.textContent = labelText; f.append(l, el); box.appendChild(f); return el; };
+  const editItem = (fn) => commit((t) => fn(t.scenery[app.selItem]));
+  if (def?.text !== undefined || it.text !== undefined) {
+    const txt = document.createElement('input');
+    txt.type = 'text';
+    txt.value = it.text ?? def?.text ?? '';
+    txt.addEventListener('change', () => editItem((x) => { const v = txt.value.trim(); if (v && v !== def?.text) x.text = v; else delete x.text; }));
+    field('Text', txt);
+  }
+  if (!def?.art) {
+    const col = document.createElement('input');
+    col.type = 'color';
+    col.value = normHex(it.color ?? def?.color ?? '#888888');
+    col.addEventListener('change', () => editItem((x) => { if (col.value.toLowerCase() === normHex(def?.color ?? '').toLowerCase()) delete x.color; else x.color = col.value; }));
+    field('Colour', col);
+  }
+  const num = (v, ph, step) => { const i = document.createElement('input'); i.type = 'number'; i.step = String(step); i.min = '0'; i.value = v === undefined ? '' : String(v); i.placeholder = ph; return i; };
+  const w = field('Width', num(it.w, String(def?.w ?? ''), 0.5));
+  w.addEventListener('change', () => editItem((x) => { const v = Number(w.value); if (w.value === '' || v === def?.w) delete x.w; else if (v > 0) x.w = round1(v); }));
+  const h = field('Depth', num(it.h, String(def?.h ?? ''), 0.5));
+  h.addEventListener('change', () => editItem((x) => { const v = Number(h.value); if (h.value === '' || v === def?.h) delete x.h; else if (v > 0) x.h = round1(v); }));
+  const rot = field('Turn', num(it.rot ?? 0, '0', 15));
+  rot.addEventListener('change', () => editItem((x) => { const v = ((Math.round(Number(rot.value)) % 360) + 360) % 360; if (v) x.rot = v; else delete x.rot; }));
+  const btns = document.createElement('div');
+  btns.className = 'row';
+  btns.style.marginTop = '4px';
+  const mk = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.addEventListener('click', fn); btns.appendChild(b); };
+  mk('Turn ↺', () => turnItem(-15));
+  mk('Turn ↻', () => turnItem(15));
+  mk('Duplicate', duplicateItem);
+  mk('Delete', deleteItem);
+  box.appendChild(btns);
+}
+function normHex(c) {
+  if (/^#[0-9a-f]{3}$/i.test(c)) return `#${c.slice(1).split('').map((x) => x + x).join('')}`;
+  return /^#[0-9a-f]{6}/i.test(c) ? c.slice(0, 7) : '#888888';
+}
+function placeItem(x, y, e) {
+  const def = sceneryDef(app.sceneryBrush);
+  if (!def) { status('Pick a scenery item first.', 'err'); return; }
+  commit((t) => {
+    if (!t.scenery) setKeyNear(t, 'scenery', [], 'ground' in t ? 'ground' : 'patches' in t ? 'patches' : 'sections');
+    t.scenery.push({ type: def.id, x: snapHalf(x, e), y: snapHalf(y, e) });
+    app.selItem = t.scenery.length - 1;
+  });
+}
+function turnItem(d) {
+  commit((t) => {
+    const it = t.scenery?.[app.selItem];
+    if (!it) return;
+    const v = ((((it.rot ?? 0) + d) % 360) + 360) % 360;
+    if (v) it.rot = v; else delete it.rot;
+  });
+}
+function duplicateItem() {
+  commit((t) => {
+    const it = t.scenery?.[app.selItem];
+    if (!it) return;
+    t.scenery.push({ ...it, x: Math.min(GRID_W, it.x + 2), y: Math.min(GRID_H, it.y + 2) });
+    app.selItem = t.scenery.length - 1;
+  });
+}
+function deleteItem() {
+  commit((t) => {
+    if (!t.scenery?.[app.selItem]) return;
+    t.scenery.splice(app.selItem, 1);
+    if (!t.scenery.length) delete t.scenery;
+    app.selItem = -1;
+  });
+}
+
+// ---- stats, legend ----
+
+function renderStats() {
+  const t = track();
+  const box = $('#stats');
+  box.innerHTML = '';
+  if (!t) return;
+  const len = lapLength(t);
+  const g = lapGeom(t);
+  const rows = [
+    ['Lap length', `${len} m`],
+    ['Drawn length', `${g.total.toFixed(1)} grid units (${(len / g.total).toFixed(1)} m each)`],
+    ['Points', String(t.path.length)],
+  ];
+  if (!app.final) {
+    const by = new Map();
+    for (const s of t.sections) { const k = kindOf(s.type)?.name ?? 'Other'; by.set(k, (by.get(k) ?? 0) + s.length); }
+    const pass = len ? t.sections.reduce((a, s) => a + s.passing * s.length, 0) / len : 0;
+    const diff = len ? t.sections.reduce((a, s) => a + (app.sectionDefs[s.type]?.diff ?? 1) * s.length, 0) / len : 0;
+    rows.push(
+      ...[...by].map(([k, m]) => [k, `${m} m (${Math.round((m / len) * 100)}%)`]),
+      ['Passing (by length)', pass.toFixed(2)],
+      ['Difficulty (by length)', diff.toFixed(2)],
+      ['Gates', t.gates?.length ? String(t.gates.length) : 'none'],
+    );
+  }
+  rows.push(['Surface patches', String(t.patches?.length ?? 0)], ['Scenery items', String(t.scenery?.length ?? 0)]);
+  for (const [a, b] of rows) { const x = document.createElement('span'); x.textContent = a; const y = document.createElement('span'); y.textContent = b; box.append(x, y); }
+}
+
+function buildLegend() {
+  const box = $('#legend');
+  box.innerHTML = '';
+  for (const k of [...KINDS, { name: 'Other', color: OTHER_COLOR }]) {
+    const s = document.createElement('span');
+    const i = document.createElement('i');
+    i.style.background = k.color;
+    s.append(i, k.name);
+    box.appendChild(s);
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Checks: the game's own checks for tracks.json (src/core/raceContent.ts TRACKS_SCHEMA and
+// checkRaceContent, src/core/trackParts.ts checkTrackParts), plus warnings about things that
+// would look or race oddly.
+
+function checkTrack(t, all) {
+  const bad = [];
+  const warn = [];
+  const P = app.parts;
+  if (!ID.test(t.id ?? '')) bad.push('The id uses only a-z, 0-9, dots, dashes and underscores.');
+  if (all.filter((x) => x.id === t.id).length > 1) bad.push(`The id "${t.id}" is used twice.`);
+  if (!t.name?.trim()) bad.push('The track needs a name.');
+  if (!ID.test(t.size ?? '')) bad.push('Size needs a value like small or practice.');
+  if (!ID.test(t.surface ?? '')) bad.push('Surface needs a value like hard_pack.');
+  if (t.kind !== undefined && !P.kinds.some((k) => k.id === t.kind)) bad.push(`No track kind "${t.kind}" in trackParts.json.`);
+  if (t.width !== undefined && !(t.width >= 1 && t.width <= 12)) bad.push('Width must be between 1 and 12.');
+  if (t.path.length < 3) bad.push('The drawing needs at least 3 points.');
+  t.path.forEach(([x, y], i) => {
+    if (x < 0 || y < 0) bad.push(`Point ${i} is below 0, which the game rejects.`);
+    else if (x > GRID_W || y > GRID_H) warn.push(`Point ${i} is off the 100 × 60 grid, so the race screen squashes the track.`);
+  });
+  if (!t.sections.length) bad.push('The track needs at least one section.');
+  t.sections.forEach((s, i) => {
+    if (Object.keys(app.sectionDefs).length && !app.sectionDefs[s.type]) bad.push(`Section ${i + 1}: no section type "${s.type}" in racing.json.`);
+    if (!(s.length >= 1)) bad.push(`Section ${i + 1}: the length must be at least 1 m.`);
+    if (!(s.passing >= 0 && s.passing <= 1)) bad.push(`Section ${i + 1}: passing must be between 0 and 1.`);
+    if (s.line !== undefined && !P.lines.includes(s.line)) bad.push(`Section ${i + 1}: no line "${s.line}" in trackParts.json.`);
+  });
+  const lap = lapLength(t);
+  (t.patches ?? []).forEach((p, i) => {
+    if (!P.surfaces.some((s) => s.id === p.surface)) bad.push(`Surface patch ${i + 1}: no surface "${p.surface}" in trackParts.json.`);
+    if (p.at >= lap) bad.push(`Surface patch ${i + 1} starts past the end of the ${lap} m lap.`);
+  });
+  if (t.ground) {
+    if (!P.ground.some((g) => g.id === t.ground.base)) bad.push(`No ground "${t.ground.base}" in trackParts.json.`);
+    for (const id of Object.keys(t.ground.paint ?? {})) if (!P.ground.some((g) => g.id === id)) bad.push(`No ground "${id}" in trackParts.json.`);
+  }
+  (t.scenery ?? []).forEach((s, i) => { if (!sceneryDef(s.type)) bad.push(`Scenery item ${i + 1}: no scenery "${s.type}" in trackParts.json.`); });
+  for (const i of sceneryOnTrack(t)) bad.push(`Scenery item ${i + 1} (${sceneryDef(t.scenery[i].type)?.name.toLowerCase() ?? t.scenery[i].type}) is on the racing surface, where riders would ride through it. Move it off the track (it is outlined in red).`);
+  // Section types against the drawing, and the start straight (as src/core/trackCheck.ts).
+  if (Object.keys(app.sectionDefs).length) {
+    const shapes = sectionShapes(t);
+    t.sections.forEach((s, i) => {
+      const def = app.sectionDefs[s.type];
+      if (!def) return;
+      if (s.type === 'start_gate') { bad.push(`Section ${i + 1} is a start gate on the lap. The start is its own start straight now, so make this a straight.`); return; }
+      const d = shapes[i];
+      if (shapeMismatch(t, i, d)) bad.push(`Section ${i + 1} (${def.name.toLowerCase()}) is drawn as ${an(d.shape)} ${d.shape} (it turns ${Math.round(d.swept)}°); it needs to be drawn as ${shapesFor(s.type).map((x) => `${an(x)} ${x}`).join(' or ')}.${app.final ? ' Reshape the drawing there.' : ' It is edged in red.'}`);
+    });
+  }
+  bad.push(...startProblems(t));
+  if (!t.practiceOnly && !t.gates?.length) warn.push('No gate curve: every gate starts the same.');
+  // Two segments that cross make a figure of eight on screen, which the race screen can't show as a bridge.
+  const g = lapGeom(t);
+  const n = g.pts.length - 1;
+  const cross = (a, b, c, d) => {
+    const o = (p, q, r) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+  };
+  let crossings = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) if (!(i === 0 && j === n - 1) && cross(g.pts[i], g.pts[i + 1], g.pts[j], g.pts[j + 1])) crossings++;
+  if (crossings) warn.push(`The drawing crosses itself ${crossings === 1 ? 'once' : `${crossings} times`}. That's fine for a crossover, but riders will pass through each other there.`);
+  return { bad, warn };
+}
+
+function renderChecks() {
+  const box = $('#checks');
+  box.innerHTML = '';
+  const t = track();
+  if (!t) return;
+  const { bad, warn } = checkTrack(t, app.data.tracks);
+  const others = app.data.tracks.filter((x) => x !== t && checkTrack(x, app.data.tracks).bad.length).map((x) => x.name || x.id);
+  for (const v of app.data.venues ?? []) if (v.track && !app.data.tracks.some((x) => x.id === v.track)) bad.push(`Venue "${v.name}" uses track "${v.track}", which doesn't exist.`);
+  const add = (cls, text) => { const d = document.createElement('div'); d.className = cls; d.textContent = text; box.appendChild(d); };
+  bad.forEach((m) => add('bad', `✕ ${m}`));
+  warn.forEach((m) => add('warn', `! ${m}`));
+  if (others.length) add('bad', `✕ Other tracks have problems: ${others.join(', ')}.`);
+  if (!bad.length && !warn.length && !others.length) add('good', '✓ This track passes the game\'s checks.');
+}
+function hasErrors() {
+  return app.data.tracks.some((t) => checkTrack(t, app.data.tracks).bad.length) || (app.data.venues ?? []).some((v) => v.track && !app.data.tracks.some((x) => x.id === v.track));
+}
+
+// ---------------------------------------------------------------------------------------------
+// Point tools
+
+/** Keeps the start straight's last point on the lap when the drawing moves under it. */
+function keepJoined(t) {
+  const sp = t.start?.path;
+  if (!sp || sp.length < 2) return;
+  const g = lapGeom(t);
+  const [x, y] = sp.at(-1);
+  const p = pointAt(g, project(g, x, y).f);
+  sp[sp.length - 1] = [round1(p.x), round1(p.y)];
+}
+function addStart() {
+  const t = track();
+  if (!t || t.start) return;
+  const st = autoStart(t);
+  if (!st) { status('No clear spot for a start straight next to the lap; make room beside the first part of the lap.', 'err'); return; }
+  commit((t) => { setKeyNear(t, 'start', st, 'sections'); app.selPt = -1; app.selStart = 0; });
+  status('Added a start straight. Drag its blue points to shape it; the white one joins the lap.', 'ok');
+}
+function insertPoint() {
+  const t = track();
+  if (t && app.selStart >= 0) {
+    // A start point is added before the joining point, or after the selected one.
+    const i = Math.min(app.selStart, t.start.path.length - 2);
+    commit((t) => {
+      const a = t.start.path[i];
+      const b = t.start.path[i + 1];
+      t.start.path.splice(i + 1, 0, [round1((a[0] + b[0]) / 2), round1((a[1] + b[1]) / 2)]);
+      app.selStart = i + 1;
+    });
+    return;
+  }
+  if (!t || app.selPt < 0) return;
+  commit(() => {
+    const a = t.path[app.selPt];
+    const b = t.path[(app.selPt + 1) % t.path.length];
+    t.path.splice(app.selPt + 1, 0, [round1((a[0] + b[0]) / 2), round1((a[1] + b[1]) / 2)]);
+    app.selPt++;
+  });
+}
+function deletePoint(i = app.selPt) {
+  const t = track();
+  if (t && app.selStart >= 0 && i === app.selPt) {
+    const j = app.selStart;
+    if (t.start.path.length <= 2) { status('The start straight needs a gate point and a joining point.', 'err'); return; }
+    if (j === t.start.path.length - 1) { status('That point joins the lap. Drag it along the lap to move the join.', 'err'); return; }
+    commit((t) => { t.start.path.splice(j, 1); app.selStart = Math.min(j, t.start.path.length - 1); });
+    return;
+  }
+  if (!t || i < 0) return;
+  if (t.path.length <= 3) { status('The drawing needs at least 3 points.', 'err'); return; }
+  commit((t) => {
+    t.path.splice(i, 1);
+    if (i === 0) status('Point 0 was the finish line; the next point is now the finish line.', 'ok');
+    app.selPt = Math.min(i, t.path.length - 1);
+  });
+}
+/** Replaces a corner point with a curve through the corner, like the berms on the backyard loop. */
+function roundCorner() {
+  const t = track();
+  const i = app.selPt;
+  if (!t || i < 0) return;
+  const n = t.path.length;
+  const P = t.path[i];
+  const A = t.path[(i - 1 + n) % n];
+  const B = t.path[(i + 1) % n];
+  const la = Math.hypot(A[0] - P[0], A[1] - P[1]);
+  const lb = Math.hypot(B[0] - P[0], B[1] - P[1]);
+  const r = Math.min(la, lb) * 0.45;
+  if (r < 1) { status('The neighbouring points are too close to round this corner.', 'err'); return; }
+  const s = [P[0] + ((A[0] - P[0]) / la) * r, P[1] + ((A[1] - P[1]) / la) * r];
+  const e = [P[0] + ((B[0] - P[0]) / lb) * r, P[1] + ((B[1] - P[1]) / lb) * r];
+  const pts = [];
+  const steps = 4;
+  for (let j = 0; j <= steps; j++) {
+    const u = j / steps;
+    // Quadratic curve from s to e with the old corner as its control point.
+    pts.push([round1((1 - u) ** 2 * s[0] + 2 * (1 - u) * u * P[0] + u * u * e[0]), round1((1 - u) ** 2 * s[1] + 2 * (1 - u) * u * P[1] + u * u * e[1])]);
+  }
+  commit((t) => {
+    t.path.splice(i, 1, ...pts);
+    // Keep the finish line where it was if the corner was the finish.
+    if (i === 0) t.path.push(...t.path.splice(0, 2));
+    app.selPt = i === 0 ? 0 : i + 2;
+  });
+}
+function startHere() {
+  const i = app.selPt;
+  if (i <= 0) return;
+  commit((t) => { t.path = [...t.path.slice(i), ...t.path.slice(0, i)]; app.selPt = 0; });
+  status('The finish line moved. The sections still start at the finish line, so check they line up with the drawing.', 'ok');
+}
+function reverse() {
+  commit((t) => {
+    t.path = [t.path[0], ...t.path.slice(1).reverse()];
+    t.sections.reverse();
+    const start = t.sections.findIndex((s) => s.type === 'start_gate');
+    if (start > 0) t.sections.unshift(...t.sections.splice(start, 1));
+    // Patches stay where they are on the ground: measured the other way round the lap.
+    const lap = lapLength(t);
+    for (const p of t.patches ?? []) p.at = (((lap - p.at - p.length) % lap) + lap) % lap;
+    deselect();
+  });
+  status(track()?.start ? 'Reversed the drawing and the order of the sections. The start straight now joins against the riding direction: redraw it.' : 'Reversed the drawing and the order of the sections.', 'ok');
+}
+function fitToGrid() {
+  commit((t) => {
+    const xs = t.path.map((p) => p[0]);
+    const ys = t.path.map((p) => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const m = 6;
+    const k = Math.min((GRID_W - 2 * m) / Math.max(1, x1 - x0), (GRID_H - 2 * m) / Math.max(1, y1 - y0));
+    const cx = (GRID_W - (x1 - x0) * k) / 2;
+    const cy = (GRID_H - (y1 - y0) * k) / 2;
+    const map = ([x, y]) => [round1(cx + (x - x0) * k), round1(cy + (y - y0) * k)];
+    t.path = t.path.map(map);
+    if (t.start) t.start.path = t.start.path.map(map);
+    keepJoined(t);
+    // Scenery moves with the track.
+    for (const it of t.scenery ?? []) [it.x, it.y] = map([it.x, it.y]);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Tracks: new, duplicate, delete, import, export
+
+function uniqueId(base) {
+  let id = base;
+  for (let n = 2; app.data.tracks.some((t) => t.id === id); n++) id = `${base}-${n}`;
+  return id;
+}
+function newTrack() {
+  begin();
+  app.data.tracks.push({
+    id: uniqueId('new-track'), name: 'New track', size: 'small', surface: 'hard_pack', kind: 'outdoor',
+    gates: [2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, -1, -1, -1, -2],
+    path: [[30, 52], [80, 52], [90, 46], [92, 30], [86, 12], [70, 8], [30, 8], [12, 14], [8, 30], [12, 46]],
+    sections: [],
+  });
+  app.cur = app.data.tracks.length - 1;
+  const t = track();
+  t.sections = sectionsFromDrawing(t);
+  const st = autoStart(t);
+  if (st) t.start = st;
+  deselect();
+  changed();
+  $('#fName').focus();
+  $('#fName').select();
+}
+function duplicateTrack() {
+  begin();
+  const t = clone(track());
+  t.id = uniqueId(`${t.id}-copy`);
+  t.name = `${t.name} (copy)`;
+  app.data.tracks.splice(app.cur + 1, 0, t);
+  app.cur++;
+  deselect();
+  changed();
+}
+function deleteTrack() {
+  const t = track();
+  const used = venuesUsing(t.id);
+  if (used.length) { status(`${used.map((v) => v.name).join(', ')} uses this track. Point the venue at another track in tracks.json first.`, 'err'); return; }
+  if (!confirm(`Delete the track "${t.name}"?`)) return;
+  begin();
+  app.data.tracks.splice(app.cur, 1);
+  app.cur = Math.max(0, app.cur - 1);
+  deselect();
+  changed();
+}
+
+const TRACK_FILE = 'mxrpg-track';
+const TRACK_KEYS = ['id', 'name', 'size', 'surface', 'kind', 'width', 'practiceOnly', 'gates', 'path', 'sections', 'start', 'patches', 'ground', 'scenery'];
+function exportTrack() {
+  const t = track();
+  download(`${t.id}.track.json`, `${JSON.stringify({ format: TRACK_FILE, version: 1, track: t }, null, 2)}\n`);
+  status(`Downloaded ${t.id}.track.json.`, 'ok');
+}
+async function importTrack(file) {
+  try {
+    const raw = JSON.parse(await file.text());
+    const t = raw?.format === TRACK_FILE ? raw.track : raw;
+    if (!t || !Array.isArray(t.path) || !Array.isArray(t.sections)) throw new Error('this is not a track file (it needs a path and sections)');
+    const clean = Object.fromEntries(TRACK_KEYS.filter((k) => t[k] !== undefined).map((k) => [k, t[k]]));
+    clean.id = uniqueId(ID.test(clean.id ?? '') ? clean.id : 'imported-track');
+    clean.name ??= clean.id;
+    clean.size ??= 'small';
+    clean.surface ??= 'hard_pack';
+    clean.path = clean.path.map((p) => [Number(p[0]), Number(p[1])]);
+    clean.sections = clean.sections.map((s) => {
+      const out = { type: String(s.type), length: Number(s.length), passing: Number(s.passing) };
+      if (s.line !== undefined) out.line = String(s.line);
+      if (s.height !== undefined) out.height = Number(s.height);
+      return out;
+    });
+    begin();
+    app.data.tracks.push(clean);
+    app.cur = app.data.tracks.length - 1;
+    deselect();
+    changed();
+    status(`Imported "${clean.name}" as ${clean.id}. Check the Checks panel for anything this game doesn't have.`, 'ok');
+  } catch (e) {
+    status(`Could not import ${file.name}: ${e.message}`, 'err');
+  }
+}
+$('#importInput').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importTrack(f); });
+
+// ---------------------------------------------------------------------------------------------
+// Saving
+
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function save(forceDownload) {
+  if (!app.data) return;
+  if (hasErrors() && !confirm('Some tracks fail the game\'s checks (see Checks), so the game will refuse to start with this file. Save anyway?')) return;
+  const text = exportTracks(app.data);
+  if (source.canWrite && forceDownload !== true) {
+    try {
+      await source.write(app.tracksPath, text);
+      app.savedText = text;
+      setDirty(false);
+      status(`Saved ${app.tracksPath}. Run npm test to check it.`, 'ok');
+      return;
+    } catch (e) {
+      console.error(e);
+      status(`Saving into the folder failed (${e.message}); downloading instead.`, 'err');
+    }
+  }
+  download('tracks.json', text);
+  app.savedText = text;
+  setDirty(false);
+  status('Downloaded tracks.json. Copy it over public/data/tracks.json.', 'ok');
+}
+
+// ---------------------------------------------------------------------------------------------
+// Preview: a dot rides the lap, spending time in each section by its length × difficulty.
+
+function startPlay() {
+  const t = track();
+  if (!t) return;
+  app.play = { f: 0, last: performance.now() };
+  const tick = (now) => {
+    if (!app.play || track() !== t) { app.play = null; refresh(); return; }
+    const dt = Math.min(0.1, (now - app.play.last) / 1000);
+    app.play.last = now;
+    const s = t.sections[sectionAt(t, app.play.f)];
+    const len = lapLength(t);
+    // About 8 seconds a lap on an average section mix.
+    const speed = 1 / 8 / (app.sectionDefs[s?.type]?.diff ?? 1);
+    app.play.f = (app.play.f + dt * speed * clamp(600 / Math.max(100, len), 0.5, 2)) % 1;
+    requestDraw();
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  refresh();
+}
+function stopPlay() { app.play = null; }
+
+// ---------------------------------------------------------------------------------------------
+// Mouse
+
+let drag = null;
+function onTrack(t, gx, gy) {
+  const pr = project(lapGeom(t), gx, gy);
+  return pr.dist * view.k <= view.width / 2 + 4 ? pr : null;
+}
+function hit(sx, sy) {
+  const t = track();
+  if (!t) return null;
+  const gp = toGrid(sx, sy);
+  if (app.mode === 'layout') {
+    const sp = t.start?.path ?? [];
+    for (let i = sp.length - 1; i >= 0; i--) {
+      const s = toScreen(sp[i][0], sp[i][1]);
+      if (Math.abs(sx - s.x) <= 8 && Math.abs(sy - s.y) <= 8) return { kind: 'spt', i };
+    }
+    for (let i = t.path.length - 1; i >= 0; i--) {
+      const s = toScreen(t.path[i][0], t.path[i][1]);
+      if (Math.hypot(sx - s.x, sy - s.y) <= 9) return { kind: 'point', i };
+    }
+    if (!app.final) {
+      const g = lapGeom(t);
+      const b = sectionBounds(t);
+      for (let i = 1; i < t.sections.length; i++) {
+        const p = pointAt(g, b[i]);
+        const s = toScreen(p.x, p.y);
+        if (Math.abs(sx - s.x) + Math.abs(sy - s.y) <= 10) return { kind: 'bound', i };
+      }
+    }
+  }
+  if (app.mode === 'scenery') {
+    const list = t.scenery ?? [];
+    for (let i = list.length - 1; i >= 0; i--) if (itemHit(list[i], gp.x, gp.y)) return { kind: 'item', i };
+    return null;
+  }
+  const pr = onTrack(t, gp.x, gp.y);
+  return pr ? { kind: 'track', f: pr.f, seg: pr.seg } : null;
+}
+function evPos(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function snapGrid(v, e) { return $('#snap').checked && !e.altKey ? Math.round(v) : round1(v); }
+function snapHalf(v, e) { return $('#snap').checked && !e.altKey ? Math.round(v * 2) / 2 : round1(v); }
+function cellAt(t, gp) { const cell = t.ground?.cell ?? 2; return { x: Math.floor(gp.x / cell), y: Math.floor(gp.y / cell) }; }
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => {
+  const t = track();
+  if (!t) return;
+  const p = evPos(e);
+  const gp = toGrid(p.x, p.y);
+  if (app.mode === 'ground') {
+    if (e.button !== 0 && e.button !== 2) return;
+    canvas.setPointerCapture(e.pointerId);
+    const c = cellAt(t, gp);
+    const id = e.button === 2 ? null : app.groundBrush;
+    if (e.shiftKey) { app.rect = { x0: c.x, y0: c.y, x1: c.x, y1: c.y, id }; requestDraw(); return; }
+    begin();
+    drag = { kind: 'paint', id, started: true };
+    paintCells(t, brushCells(c.x, c.y), id);
+    changed();
+    return;
+  }
+  const h = hit(p.x, p.y);
+  if (e.button === 2) {
+    if (h?.kind === 'point') deletePoint(h.i);
+    else if (h?.kind === 'spt') { app.selStart = h.i; app.selPt = -1; deletePoint(); }
+    else if (h?.kind === 'item') { app.selItem = h.i; deleteItem(); }
+    return;
+  }
+  if (e.button !== 0) return;
+  canvas.setPointerCapture(e.pointerId);
+  if (app.mode === 'surface') {
+    const pr = onTrack(t, gp.x, gp.y);
+    if (!pr) { app.selPatch = -1; refresh(); return; }
+    const metres = pr.f * lapLength(t);
+    const i = patchAt(t, metres);
+    if (i >= 0) { app.selPatch = i; drag = { kind: 'patch', i, off: metres - t.patches[i].at, started: false }; refresh(); }
+    else addPatch(metres);
+    return;
+  }
+  if (app.mode === 'scenery') {
+    if (h?.kind === 'item') {
+      app.selItem = h.i;
+      const it = t.scenery[h.i];
+      drag = { kind: 'item', i: h.i, dx: gp.x - it.x, dy: gp.y - it.y, started: false };
+      refresh();
+    } else if (app.selItem >= 0) { app.selItem = -1; refresh(); }
+    else placeItem(gp.x, gp.y, e);
+    return;
+  }
+  if (!h) { deselect(); refresh(); return; }
+  if (h.kind === 'point') {
+    app.selPt = h.i;
+    app.selStart = -1;
+    drag = { kind: 'point', i: h.i, started: false };
+  } else if (h.kind === 'spt') {
+    app.selStart = h.i;
+    app.selPt = -1;
+    drag = { kind: 'spt', i: h.i, started: false };
+  } else if (h.kind === 'bound') {
+    app.selSec = h.i;
+    drag = { kind: 'bound', i: h.i, started: false };
+  } else {
+    app.selSec = app.final ? -1 : sectionAt(t, h.f);
+    app.selPt = -1;
+  }
+  refresh();
+});
+canvas.addEventListener('pointermove', (e) => {
+  const t = track();
+  const p = evPos(e);
+  const gp = toGrid(p.x, p.y);
+  if (t) {
+    const pr = onTrack(t, gp.x, gp.y);
+    const len = lapLength(t);
+    const sec = pr ? t.sections[sectionAt(t, pr.f)] : null;
+    const patch = pr ? t.patches?.[patchAt(t, pr.f * len)] : null;
+    const where = pr
+      ? ` · ${Math.round(pr.f * len)} m into the lap${app.final ? '' : ` · ${app.sectionDefs[sec.type]?.name ?? sec.type}`}${patch ? ` · ${surfaceDef(patch.surface)?.name ?? patch.surface}` : ''}`
+      : '';
+    $('#posLabel').textContent = `x ${gp.x.toFixed(1)}, y ${gp.y.toFixed(1)}${where}`;
+    if (app.mode === 'ground') {
+      const c = cellAt(t, gp);
+      if (!app.hoverCell || c.x !== app.hoverCell.x || c.y !== app.hoverCell.y) { app.hoverCell = c; requestDraw(); }
+    }
+  }
+  if (app.rect) { const c = cellAt(t, gp); app.rect.x1 = c.x; app.rect.y1 = c.y; requestDraw(); return; }
+  if (!drag) {
+    const h = t && hit(p.x, p.y);
+    canvas.style.cursor = app.mode === 'ground' ? 'crosshair' : ['point', 'spt', 'bound', 'item'].includes(h?.kind) ? 'grab' : h?.kind === 'track' ? 'pointer' : 'default';
+    const hb = h?.kind === 'bound' ? h.i : -1;
+    if (hb !== app.hoverBound) { app.hoverBound = hb; requestDraw(); }
+    return;
+  }
+  if (!drag.started) { begin(); drag.started = true; }
+  if (drag.kind === 'paint') {
+    const c = cellAt(t, gp);
+    paintCells(t, brushCells(c.x, c.y), drag.id);
+  } else if (drag.kind === 'point') {
+    t.path[drag.i] = [clamp(snapGrid(gp.x, e), 0, GRID_W), clamp(snapGrid(gp.y, e), 0, GRID_H)];
+    keepJoined(t);
+  } else if (drag.kind === 'spt') {
+    const sp = t.start.path;
+    if (drag.i === sp.length - 1) {
+      // The last point is where the start straight joins the lap, so it stays on the lap.
+      const g = lapGeom(t);
+      const p = pointAt(g, project(g, gp.x, gp.y).f);
+      sp[drag.i] = [round1(p.x), round1(p.y)];
+    } else sp[drag.i] = [clamp(snapGrid(gp.x, e), 0, GRID_W), clamp(snapGrid(gp.y, e), 0, GRID_H)];
+  } else if (drag.kind === 'item') {
+    const it = t.scenery[drag.i];
+    it.x = clamp(snapHalf(gp.x - drag.dx, e), 0, GRID_W);
+    it.y = clamp(snapHalf(gp.y - drag.dy, e), 0, GRID_H);
+  } else if (drag.kind === 'patch') {
+    const lap = lapLength(t);
+    const m = project(lapGeom(t), gp.x, gp.y).f * lap;
+    t.patches[drag.i].at = (((Math.round((m - drag.off) / 5) * 5) % lap) + lap) % lap;
+  } else {
+    // Move metres between the two sections either side of the boundary.
+    const f = project(lapGeom(t), gp.x, gp.y).f;
+    const len = lapLength(t);
+    const before = t.sections.slice(0, drag.i - 1).reduce((a, s) => a + s.length, 0);
+    const a = t.sections[drag.i - 1];
+    const b = t.sections[drag.i];
+    const pair = a.length + b.length;
+    const step = e.altKey ? 1 : 5;
+    a.length = clamp(Math.round((f * len - before) / step) * step, 1, pair - 1);
+    b.length = pair - a.length;
+  }
+  changed();
+});
+canvas.addEventListener('pointerup', () => {
+  if (app.rect) {
+    const t = track();
+    const [x0, y0, x1, y1] = rectCells(app.rect);
+    const { id } = app.rect;
+    app.rect = null;
+    const cells = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) cells.push([x, y]);
+    commit(() => paintCells(t, cells, id));
+    return;
+  }
+  if (drag?.started && exportTracks(app.data) === exportTracks(app.undo.at(-1).data)) app.undo.pop();
+  drag = null;
+  refresh();
+});
+canvas.addEventListener('pointerleave', () => { if (app.hoverCell) { app.hoverCell = null; requestDraw(); } });
+canvas.addEventListener('dblclick', (e) => {
+  const t = track();
+  if (!t || app.mode !== 'layout') return;
+  const p = evPos(e);
+  const h = hit(p.x, p.y);
+  if (h?.kind !== 'track') return;
+  const gp = toGrid(p.x, p.y);
+  commit((t) => {
+    t.path.splice(h.seg + 1, 0, [clamp(snapGrid(gp.x, e), 0, GRID_W), clamp(snapGrid(gp.y, e), 0, GRID_H)]);
+    keepJoined(t);
+    app.selPt = h.seg + 1;
+    app.selStart = -1;
+  });
+});
+window.addEventListener('resize', requestDraw);
+
+// ---------------------------------------------------------------------------------------------
+// Buttons and keys
+
+$('#btnOpen').addEventListener('click', openFolder);
+$('#btnOpen2').addEventListener('click', openFolder);
+$('#btnSave').addEventListener('click', () => save());
+$('#btnDownload').addEventListener('click', () => save(true));
+$('#btnUndo').addEventListener('click', undo);
+$('#btnRedo').addEventListener('click', redo);
+$('#btnNew').addEventListener('click', newTrack);
+$('#btnDup').addEventListener('click', duplicateTrack);
+$('#btnDel').addEventListener('click', deleteTrack);
+$('#btnImport').addEventListener('click', () => $('#importInput').click());
+$('#btnExport').addEventListener('click', exportTrack);
+$('#btnAddSec').addEventListener('click', addSection);
+$('#btnSplitSec').addEventListener('click', splitSection);
+$('#btnInsert').addEventListener('click', insertPoint);
+$('#btnDelPt').addEventListener('click', () => deletePoint());
+$('#btnRound').addEventListener('click', roundCorner);
+$('#btnStart').addEventListener('click', startHere);
+$('#btnReverse').addEventListener('click', reverse);
+$('#btnAddStart').addEventListener('click', addStart);
+$('#btnFitSecs').addEventListener('click', () => {
+  const t = track();
+  if (!t || !confirm('Replace all the sections with straights and corners that suit the drawing?')) return;
+  commit((t) => { t.sections = sectionsFromDrawing(t); app.selSec = -1; });
+  status('Sections now follow the drawing. Change straights to jumps, and corners to berms or ruts, as you like.', 'ok');
+});
+$('#btnFit').addEventListener('click', fitToGrid);
+$('#showScene').addEventListener('change', requestDraw);
+$('#btnPlay').addEventListener('click', () => { if (app.play) { stopPlay(); refresh(); } else startPlay(); });
+$('#btnRide').addEventListener('click', () => { const t = track(); if (t) window.open(`/?testtrack=${encodeURIComponent(t.id)}`, '_blank'); });
+for (const b of document.querySelectorAll('#modes button')) b.addEventListener('click', () => setMode(b.dataset.mode));
+for (const id of ['#btnHelp', '#btnHelp2']) $(id).addEventListener('click', () => $('#help').showModal());
+$('#btnHelpClose').addEventListener('click', () => $('#help').close());
+
+window.addEventListener('keydown', (e) => {
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName ?? '');
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
+  if (typing) return;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+  if (!track()) return;
+  if (mod && e.key.toLowerCase() === 'd' && app.mode === 'scenery') { e.preventDefault(); duplicateItem(); return; }
+  if (mod) return;
+  const modes = { 1: 'layout', 2: 'surface', 3: 'ground', 4: 'scenery' };
+  if (modes[e.key]) { setMode(modes[e.key]); return; }
+  if (e.key.toLowerCase() === 'p') { $('#btnPlay').click(); return; }
+  if (e.key === 'Escape') { deselect(); refresh(); return; }
+  const del = e.key === 'Delete' || e.key === 'Backspace';
+  if (app.mode === 'scenery') {
+    if (del) { e.preventDefault(); deleteItem(); }
+    else if (e.key.toLowerCase() === 'q') turnItem(-15);
+    else if (e.key.toLowerCase() === 'e') turnItem(15);
+    else if (e.key.startsWith('Arrow') && app.selItem >= 0) {
+      e.preventDefault();
+      const d = e.shiftKey ? 2 : 0.5;
+      const [dx, dy] = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+      commit((t) => { const it = t.scenery[app.selItem]; it.x = clamp(round1(it.x + dx), 0, GRID_W); it.y = clamp(round1(it.y + dy), 0, GRID_H); });
+    }
+    return;
+  }
+  if (app.mode === 'surface') {
+    if (del && app.selPatch >= 0) { e.preventDefault(); deletePatch(app.selPatch); }
+    return;
+  }
+  if (app.mode !== 'layout') return;
+  if (del) { e.preventDefault(); deletePoint(); }
+  else if (e.key.toLowerCase() === 'r') roundCorner();
+  else if (e.key.startsWith('Arrow') && app.selPt >= 0) {
+    e.preventDefault();
+    const d = e.shiftKey ? 5 : $('#snap').checked ? 1 : 0.1;
+    const [dx, dy] = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+    commit((t) => { const p = t.path[app.selPt]; t.path[app.selPt] = [clamp(round1(p[0] + dx), 0, GRID_W), clamp(round1(p[1] + dy), 0, GRID_H)]; keepJoined(t); });
+  } else if (e.key.startsWith('Arrow') && app.selStart >= 0 && app.selStart < (track().start?.path.length ?? 0) - 1) {
+    e.preventDefault();
+    const d = e.shiftKey ? 5 : $('#snap').checked ? 1 : 0.1;
+    const [dx, dy] = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+    commit((t) => { const p = t.start.path[app.selStart]; t.start.path[app.selStart] = [clamp(round1(p[0] + dx), 0, GRID_W), clamp(round1(p[1] + dy), 0, GRID_H)]; });
+  }
+});
+window.addEventListener('beforeunload', (e) => { if (app.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------------------------------------------------------------------------------------------
+// Status line
+
+let statusTimer = 0;
+function status(text, kind = '') {
+  const el = $('#msg');
+  el.textContent = text;
+  el.className = kind;
+  clearTimeout(statusTimer);
+  if (kind !== 'err') statusTimer = setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 9000);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Served over http (for example `npm run dev`, then /tools/track-editor.html): load the track
+// data straight from the server. Saving downloads the file.
+
+async function tryServer() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  for (const base of ['../public/data/', '/data/', 'data/']) {
+    try {
+      const r = await fetch(`${base}tracks.json`, { cache: 'no-store' });
+      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) continue;
+      const hint = $('#serverHint');
+      hint.innerHTML = '';
+      const b = document.createElement('button');
+      b.textContent = 'Load the tracks from this server';
+      b.addEventListener('click', () => useSource(new HttpSource(base)));
+      hint.append('Or: ', b, ' (saving downloads the file).');
+      return;
+    } catch { /* try the next */ }
+  }
+}
+
+setMode('layout');
+tryServer();
+window.trackEditor = { app, exportTracks, parseKeepFloats, useSource, HttpSource, ListSource, checkTrack, setMode, paintCells, commit, lapGeom, project, toScreen, sceneryOnTrack, sectionShapes, startGeom, startProblems, sectionsFromDrawing, autoStart }; // for tests
+</script>
+</body>
+</html>

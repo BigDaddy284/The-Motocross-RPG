@@ -3,6 +3,7 @@ import type { BakedMap } from './mapTypes';
 import type { RacingData } from './race';
 import type { RidersData, TracksData } from './raceDay';
 import type { SkillsData } from './skills';
+import { layoutProblems } from './trackCheck';
 import type { ContentError, Schema } from './validate';
 
 // Schemas and cross-checks for the skills, racing, tracks and riders files.
@@ -92,7 +93,7 @@ export const RACING_SCHEMA: Schema = {
     ink: { type: 'number', integer: true, min: 0 },
     sections: {
       type: 'record',
-      values: { type: 'object', fields: { name: S, diff: N0, skills: WEIGHTS, stats: { type: 'array', minItems: 1, items: IDS }, riderWeight: SHARE, damage: IDS } },
+      values: { type: 'object', fields: { name: S, diff: N0, skills: WEIGHTS, stats: { type: 'array', minItems: 1, items: IDS }, riderWeight: SHARE, damage: IDS, shapes: { type: 'array', minItems: 1, items: { type: 'string', oneOf: ['straight', 'sweeper', 'corner', 'hairpin'] } } } },
     },
     damageSlots: { type: 'record', values: { type: 'array', minItems: 1, items: IDS } },
     wear: {
@@ -127,7 +128,7 @@ export const TRACKS_SCHEMA: Schema = {
       minItems: 1,
       items: {
         type: 'object',
-        optional: ['practiceOnly', 'gates'],
+        optional: ['practiceOnly', 'gates', 'kind', 'width', 'patches', 'ground', 'scenery', 'start'],
         fields: {
           id: IDS,
           name: S,
@@ -136,7 +137,31 @@ export const TRACKS_SCHEMA: Schema = {
           practiceOnly: { type: 'boolean' },
           gates: { type: 'array', items: N },
           path: { type: 'array', minItems: 3, items: POINT },
-          sections: { type: 'array', minItems: 1, items: { type: 'object', fields: { type: IDS, length: { type: 'number', min: 1 }, passing: SHARE } } },
+          sections: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'object', optional: ['line', 'height'], fields: { type: IDS, length: { type: 'number', min: 1 }, passing: SHARE, line: IDS, height: N0 } },
+          },
+          kind: IDS,
+          width: { type: 'number', min: 1, max: 12 },
+          start: { type: 'object', optional: ['passing'], fields: { path: { type: 'array', minItems: 2, items: POINT }, passing: SHARE } },
+          patches: { type: 'array', items: { type: 'object', fields: { surface: IDS, at: N0, length: { type: 'number', min: 1 } } } },
+          ground: {
+            type: 'object',
+            fields: {
+              base: IDS,
+              cell: { type: 'number', integer: true, min: 1, max: 10 },
+              paint: { type: 'record', values: { type: 'array', items: { type: 'array', items: { type: 'number', integer: true, min: 0 }, minItems: 2, maxItems: 2 } } },
+            },
+          },
+          scenery: {
+            type: 'array',
+            items: {
+              type: 'object',
+              optional: ['w', 'h', 'rot', 'text', 'color'],
+              fields: { type: IDS, x: N, y: N, w: { type: 'number', min: 0.1 }, h: { type: 'number', min: 0.1 }, rot: N, text: { type: 'string' }, color: { type: 'string', pattern: /^#[0-9a-fA-F]{3,8}$/ } },
+            },
+          },
         },
       },
     },
@@ -174,7 +199,7 @@ export const RIDERS_SCHEMA: Schema = {
       type: 'array',
       items: {
         type: 'object',
-        optional: ['tag', 'skills'],
+        optional: ['tag', 'skills', 'style'],
         fields: {
           id: IDS,
           name: S,
@@ -183,6 +208,11 @@ export const RIDERS_SCHEMA: Schema = {
           skills: { type: 'record', values: LEVEL },
           bike: { type: 'object', fields: { brand: IDS, grade: { type: 'number', integer: true, min: 1, max: 10 }, condition: SHARE } },
           tactic: { type: 'object', optional: ['push', 'pushGap'], fields: { message: IDS, push: N0, pushGap: N0 } },
+          style: {
+            type: 'object',
+            optional: ['line', 'aggression', 'jumps'],
+            fields: { line: { type: 'string', oneOf: ['inside', 'middle', 'outside'] }, aggression: SHARE, jumps: { type: 'string', oneOf: ['scrub', 'float'] } },
+          },
         },
       },
     },
@@ -222,6 +252,7 @@ export function checkRaceContent(c: { skills: SkillsData; racing: RacingData; tr
   tracks.tracks.forEach((t, i) => {
     trackIds.add(t.id);
     t.sections.forEach((s, j) => !racing.sections[s.type] && err(F.tracks, `tracks[${i}].sections[${j}].type`, `no section "${s.type}" in ${F.racing}`));
+    for (const p of layoutProblems(t, racing.sections)) err(F.tracks, `tracks[${i}].${p.field}`, `${t.id}: ${p.message}`);
   });
   const fieldIds = new Set(Object.keys(riders.fields));
   tracks.venues.forEach((v, i) => {

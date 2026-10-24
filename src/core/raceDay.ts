@@ -1,6 +1,7 @@
 import { bikeProblem, pence, type BikesData, type Bike, type CareerState } from './career';
 import { MotoSim, mixSeed, seededRng, type Entrant, type RacingData, type RiderResult, type Tactic, type TrackDef } from './race';
 import { addXp, childLevels, type LevelUp, type SkillsData } from './skills';
+import type { RiderStyle } from './riderProfile';
 
 // Race days, practice and venues (Spec 12.2a, 14): who is in the field, gate picks, prize money,
 // points, and putting the XP and wear back on the career. Pure rules with no graphics.
@@ -14,6 +15,7 @@ export interface CpuRiderDef {
   skills?: Record<string, number>;
   bike: { brand: string; grade: number; condition: number };
   tactic: Tactic;
+  style?: RiderStyle;
 }
 
 export interface RidersData {
@@ -85,7 +87,7 @@ export function cpuEntrant(rc: RaceContent, def: CpuRiderDef, cls: string, gate 
   const skills: Record<string, number> = {};
   for (const lead of rc.skills.leads) for (const c of lead.children) skills[c.id] = lead.id === 'rider' ? def.level : 1;
   Object.assign(skills, def.skills);
-  return { id: def.id, name: def.name, tag: def.tag, player: false, skills, bike: cpuBike(rc.bikes, def, cls), tactic: def.tactic, gate };
+  return { id: def.id, name: def.name, tag: def.tag, player: false, skills, bike: cpuBike(rc.bikes, def, cls), tactic: def.tactic, gate, ...(def.style ? { style: def.style } : {}) };
 }
 
 export function playerEntrant(rc: RaceContent, career: CareerState, name: string, gate = 0): Entrant {

@@ -1,10 +1,15 @@
 import Phaser from 'phaser';
 import { CONTENT_FILES, checkContent, type Manifest, type RawContent } from '../core/content';
 import type { BakedMap } from '../core/mapTypes';
+import { newCareerState } from '../core/career';
+import type { VenueDef } from '../core/raceDay';
+import { SAVE_VERSION, type SaveData } from '../core/saves';
 import { Travel } from '../core/travel';
 import { formatError } from '../core/validate';
 import { services } from '../services';
 import { COLORS, textStyle } from '../ui/theme';
+import { START_MAP } from './careerFlow';
+import type { RaceSceneData } from './RaceScene';
 
 // Loads the manifest, every baked map's data and the content files, checks them all, then loads
 // the character sheets. Map images load later, the first time each map is visited.
@@ -47,7 +52,24 @@ export class BootScene extends Phaser.Scene {
     services.content = content;
     services.maps = maps;
     services.travel = new Travel(maps, content.world.locks);
-    this.scene.start('menu');
+    const test = new URLSearchParams(window.location.search).get('testtrack');
+    if (test && content.tracks.tracks.some((t) => t.id === test)) this.testRide(test);
+    else this.scene.start('menu');
+  }
+
+  /**
+   * Dev only: ?testtrack=<track id> goes straight to a race day on that track with a new rider
+   * and the local field, without a venue or a save, to try a track from the track editor.
+   */
+  private testRide(trackId: string): void {
+    const { bikes, story, tracks } = services.content;
+    const track = tracks.tracks.find((t) => t.id === trackId)!;
+    const career = newCareerState(bikes, story, bikes.brands[0].id);
+    for (const part of Object.values(career.bike.parts)) part.condition = 1;
+    const save: SaveData = { version: SAVE_VERSION, savedAt: new Date().toISOString(), rider: { name: 'Tester', look: '' }, position: { map: START_MAP, x: 0, y: 0, facing: 'down' }, flags: { first_race_done: true }, stats: { playSeconds: 0 }, career };
+    const venue: VenueDef = { id: `test-${trackId}`, name: track.name, map: START_MAP, track: trackId, class: '50cc', field: 'area1.local' };
+    const data: RaceSceneData = { mode: track.practiceOnly ? 'practice' : 'raceday', venue, save, fee: 0, onDone: () => this.scene.start('menu') };
+    this.scene.start('race', data);
   }
 
   /** A content problem stops the game with the file and field named, rather than failing later. */

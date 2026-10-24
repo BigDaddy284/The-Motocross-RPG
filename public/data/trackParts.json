@@ -1,0 +1,53 @@
+{
+  "note": "The parts a track is built from beyond its sections (tracks.json): track kinds, surface patches, the ground tiles round the track and the scenery. Read by the game and by tools/track-editor.html. sectionEditor shows the section editor in the track editor: true while the game is in development, false for Final v1 (the section data and the race simulation stay the same either way). Ground and scenery art are paths under assets/art/area-map/tiled/tiles without .png; scenery with no art is drawn by the game. w and h are the default size on the 100 x 60 track grid.",
+  "sectionEditor": true,
+  "kinds": [
+    {"id": "stadium", "name": "Stadium (supercross)", "view": "screen", "desc": "A short track in an arena that fits on one screen."},
+    {"id": "outdoor", "name": "Outdoor motocross", "view": "follow", "desc": "A natural-terrain track; the view follows the riders when it is too long for one screen."},
+    {"id": "endurance", "name": "Endurance", "view": "follow", "desc": "A long loop for long races; the view follows the riders, with a map of the whole track."}
+  ],
+  "lines": ["inside", "middle", "outside"],
+  "surfaces": [
+    {"id": "mud", "name": "Mud", "color": "#5a3d22"},
+    {"id": "sand", "name": "Sand", "color": "#d9c27a"},
+    {"id": "water", "name": "Water splash", "color": "#4a86c0"},
+    {"id": "ruts", "name": "Ruts", "color": "#6e4524"},
+    {"id": "gravel", "name": "Loose stones", "color": "#9a9488"},
+    {"id": "concrete", "name": "Concrete pad", "color": "#a8a8a0"}
+  ],
+  "ground": [
+    {"id": "grass", "name": "Grass", "art": "terrain-common/grass-plain-1", "color": "#5f8f3c"},
+    {"id": "grass2", "name": "Grass (darker)", "art": "terrain-common/grass-plain-4", "color": "#557f36"},
+    {"id": "flowers", "name": "Grass and flowers", "art": "terrain-common/grass-flowers-1", "color": "#6a9a44"},
+    {"id": "long_grass", "name": "Long grass", "art": "ground-edges/long-grass-1", "color": "#4f7a32"},
+    {"id": "dirt", "name": "Dirt", "art": "terrain-common/dirt-1", "color": "#9a6a3c"},
+    {"id": "dirt2", "name": "Dirt (darker)", "art": "terrain-common/dirt-2", "color": "#86592f"},
+    {"id": "gravel", "name": "Gravel", "art": "ground-edges/gravel-1", "color": "#8f8a80"},
+    {"id": "concrete", "name": "Concrete", "art": "terrain-common/concrete-slabs", "color": "#9c9c96"},
+    {"id": "tarmac", "name": "Tarmac", "art": "terrain-common/road-1", "color": "#4a4a4e"},
+    {"id": "arena_floor", "name": "Arena floor", "color": "#2e2a30"}
+  ],
+  "scenery": [
+    {"id": "banner", "name": "Banner", "w": 10, "h": 1, "color": "#d33a2c", "text": "MOTOCROSS"},
+    {"id": "sponsor_board", "name": "Sponsor board", "w": 6, "h": 1.5, "color": "#2a6fc0", "text": "SPONSOR"},
+    {"id": "start_gate", "name": "Start gate", "w": 16, "h": 2, "color": "#c9c9c9", "overTrack": true},
+    {"id": "tuff_block", "name": "Tuff block", "w": 3, "h": 1, "color": "#f0f0f0"},
+    {"id": "hay_bale", "name": "Hay bale", "w": 2, "h": 1.2, "color": "#d8b45a"},
+    {"id": "tyre_wall", "name": "Tyre wall", "w": 4, "h": 1, "color": "#26262a"},
+    {"id": "tape", "name": "Track tape", "w": 8, "h": 0.4, "color": "#f2f2f2"},
+    {"id": "flag_post", "name": "Marshal post", "w": 1.5, "h": 1.5, "color": "#f0c020"},
+    {"id": "stand", "name": "Grandstand", "w": 18, "h": 5, "color": "#7a7f8a"},
+    {"id": "crowd", "name": "Spectators", "w": 8, "h": 2, "color": "#c0607a"},
+    {"id": "pit_tent", "name": "Pit tent", "w": 5, "h": 4, "color": "#3a8fd8"},
+    {"id": "van", "name": "Race van", "w": 6, "h": 3, "color": "#e8e8e8"},
+    {"id": "light_tower", "name": "Floodlight", "w": 2, "h": 2, "color": "#d0d0d0"},
+    {"id": "finish_arch", "name": "Finish arch", "w": 14, "h": 1.5, "color": "#14141e", "text": "FINISH", "overTrack": true},
+    {"id": "tree", "name": "Tree", "w": 4, "h": 4, "art": "town-props/tree", "color": "#2f6a2a"},
+    {"id": "bush", "name": "Bush", "w": 2, "h": 2, "art": "town-props/bush", "color": "#3f7a32"},
+    {"id": "hedge", "name": "Hedge", "w": 2, "h": 2, "art": "town-props/hedge-mid", "color": "#3a6e2e"},
+    {"id": "fence", "name": "Rail fence", "w": 2, "h": 2, "art": "venue-frontage/fence-rail", "color": "#8a6a44"},
+    {"id": "barrels", "name": "Barrels", "w": 2, "h": 2, "art": "industrial-props/barrels", "color": "#3a6ab0"},
+    {"id": "tyre_stack", "name": "Tyre stack", "w": 2, "h": 2, "art": "industrial-props/tyre-stack-pair", "color": "#222"},
+    {"id": "skip", "name": "Skip", "w": 3, "h": 2, "art": "industrial-props/skip", "color": "#e0a020"}
+  ]
+}

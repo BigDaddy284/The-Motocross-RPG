@@ -322,7 +322,7 @@ function copyObj(o, changes) {
   if (FLOAT_KEYS.has(o)) FLOAT_KEYS.set(n, new Set(FLOAT_KEYS.get(o)));
   return n;
 }
-function pyStr(s) { return JSON.stringify(s).replace(/[\u0080-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`); }
+function pyStr(s) { return JSON.stringify(s).replace(/[\u0080-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`); }
 function pyDump(v, holder, key) {
   if (v === null || v === undefined) return 'null';
   if (typeof v === 'boolean') return v ? 'true' : 'false';

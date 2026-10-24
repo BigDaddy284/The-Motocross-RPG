@@ -1,4 +1,6 @@
 import { bikeStats, type Bike, type BikesData } from './career';
+import { lapPlan, sectionBounds, startGeom, type DrawnShape, type StartGeom } from './trackGeom';
+import type { RiderStyle } from './riderProfile';
 
 // The race simulation (Spec 10, GDD 11). Pure rules with no graphics: the race screen plays a
 // lap's results out section by section, and auto-complete just runs the laps straight through,
@@ -16,6 +18,8 @@ export interface SectionDef {
   riderWeight: number;
   /** Which group of parts a crash here damages. */
   damage: string;
+  /** The drawn shapes the section can sit on (trackGeom.drawnShape): a hairpin must be drawn as one. */
+  shapes: DrawnShape[];
 }
 
 export interface MistakeOutcome {
@@ -107,6 +111,45 @@ export interface TrackSection {
   type: string;
   length: number;
   passing: number;
+  /** The line most riders take through it (trackParts.json lines); the race view only. */
+  line?: string;
+  /** Height in metres of the jump face or hill, for the race view. */
+  height?: number;
+}
+
+/** A stretch of the lap with a different surface, in metres from the start line (race view only). */
+export interface SurfacePatch {
+  surface: string;
+  at: number;
+  length: number;
+}
+
+/** A piece of scenery on the 100 × 60 track grid (race view only). */
+export interface SceneryItem {
+  type: string;
+  x: number;
+  y: number;
+  /** Size on the grid; the scenery type's default when left out. */
+  w?: number;
+  h?: number;
+  /** Turned this many degrees clockwise. */
+  rot?: number;
+  text?: string;
+  color?: string;
+}
+
+/** The start straight from the gate to the lap, on the 100 × 60 track grid. */
+export interface TrackStart {
+  path: [number, number][];
+  /** Passing chance on it, as for a section; 0.6 when left out. */
+  passing?: number;
+}
+
+/** Ground round the track: a base ground and painted cells of cell × cell grid units, by ground id. */
+export interface TrackGround {
+  base: string;
+  cell: number;
+  paint: Record<string, [number, number][]>;
 }
 
 export interface TrackDef {
@@ -120,6 +163,15 @@ export interface TrackDef {
   /** The shape drawn on the race screen, on a 100 × 60 grid, starting at the start line. */
   path: [number, number][];
   sections: TrackSection[];
+  /** stadium, outdoor or endurance (trackParts.json kinds); outdoor when left out. */
+  kind?: string;
+  /** Track width in grid units on the race view; 3.4 when left out. */
+  width?: number;
+  patches?: SurfacePatch[];
+  ground?: TrackGround;
+  /** The start straight: the gate first, its last point on the lap where it joins (trackGeom.startGeom). */
+  start?: TrackStart;
+  scenery?: SceneryItem[];
 }
 
 export interface Tactic {
@@ -140,8 +192,11 @@ export interface Entrant {
   tactic: Tactic;
   /** Gate number from 0, best first. Lap 1 starts in gate order. */
   gate: number;
+  /** How they ride on the race screen (riderProfile.ts); never changes a result. */
+  style?: RiderStyle;
 }
 
+/** Events name the section by index; -1 is the start straight. */
 export type RaceEvent =
   | { kind: 'pass'; t: number; rider: string; other: string; section: number }
   | { kind: 'failedPass'; t: number; rider: string; other: string; section: number }
@@ -151,7 +206,11 @@ export type RaceEvent =
 
 export interface LapTrace {
   lap: number;
-  /** Per rider: the race time entering the lap and at the end of each section. */
+  /** Race distance in laps at each timing point: the start of the lap, then the end of each stretch (trackGeom.lapPlan). */
+  marks: number[];
+  /** The section ridden in each stretch, in order; -1 is the start straight. */
+  secs: number[];
+  /** Per rider: the race time at each of the marks (fewer for a rider who dropped out). */
   times: Record<string, number[]>;
   events: RaceEvent[];
 }
@@ -227,6 +286,8 @@ export class MotoSim {
   private readonly cls: ClassRules;
   private readonly ceiling: number;
   private lapNo = 0;
+  private readonly bounds: number[];
+  private readonly start: StartGeom;
 
   constructor(
     private readonly racing: RacingData,
@@ -237,6 +298,8 @@ export class MotoSim {
     readonly opts: MotoOptions,
   ) {
     this.rng = seededRng(opts.seed);
+    this.bounds = sectionBounds(track);
+    this.start = startGeom(track);
     this.cls = racing.classes[classId];
     this.ceiling = bikes.classes.find((c) => c.id === classId)?.ceiling ?? 1;
     this.ink = racing.ink;
@@ -296,7 +359,8 @@ export class MotoSim {
     const lap = ++this.lapNo;
     const { sim } = this.racing;
     const active = this.riders.filter((r) => !r.retired);
-    const trace: LapTrace = { lap, times: {}, events: [] };
+    const plan = lapPlan(this.track, lap, this.bounds, this.start);
+    const trace: LapTrace = { lap, marks: plan.marks, secs: plan.secs, times: {}, events: [] };
     for (const r of active) {
       trace.times[r.e.id] = [r.time];
       if (!r.e.player) r.message = this.cpuMessage(r);
@@ -308,14 +372,19 @@ export class MotoSim {
     const cur = new Map(active.map((r) => [r, r.time]));
     const out = new Set<RiderState>();
 
-    this.track.sections.forEach((sec, si) => {
-      const isStart = lap === 1 && si === 0 && sec.type === 'start_gate' && !this.opts.practice;
+    plan.secs.forEach((si, leg) => {
+      // The start straight rides as a start (gate bonus, start skills) in a race; in practice it's a straight.
+      const full = si < 0 ? { type: 'start_gate', length: plan.metres[leg], passing: this.track.start?.passing ?? 0.6 } : this.track.sections[si];
+      const sec = { ...full, length: plan.metres[leg] };
+      const isStart = si < 0 && !this.opts.practice;
       const def = this.racing.sections[sec.type === 'start_gate' && !isStart ? 'straight' : sec.type];
+      // A section joined part way through on lap 1 is only partly ridden, with fewer chances to slip.
+      const share = Math.min(1, sec.length / Math.max(1e-9, full.length));
       const done: RiderState[] = [];
       for (const r of order) {
         if (out.has(r)) continue;
         let t = this.sectionTime(r, sec, def, isStart ? r.e.gate : -1) * (air.get(r) ?? 1);
-        const m = this.mistake(r, def);
+        const m = this.mistake(r, def, share);
         if (m) {
           const lost = m.timePct ? t * (m.timePct[0] + this.rng() * (m.timePct[1] - m.timePct[0])) / 100 : this.crashSeconds(r, m);
           t += lost;
@@ -352,8 +421,8 @@ export class MotoSim {
       }
       for (const r of done) trace.times[r.e.id].push(cur.get(r)!);
       order = done.slice().sort((a, b) => cur.get(a)! - cur.get(b)!);
-      // Clean air and traffic after the first corner on lap 1 (Spec 10.4).
-      if (lap === 1 && si === 1 && !this.opts.practice) {
+      // Clean air and traffic after the first stretch of the lap the field joins on lap 1 (Spec 10.4).
+      if (lap === 1 && leg === Math.min(1, plan.secs.length - 1) && !this.opts.practice) {
         const ca = sim.cleanAir;
         order.forEach((r, i) => {
           if (i < ca.top) air.set(r, 1 - ca.bonusPct / 100);
@@ -368,7 +437,7 @@ export class MotoSim {
       r.laps += 1;
       r.lapTimes.push(r.time - startTimes.get(r)!);
     }
-    if (this.player && !this.player.retired && active.includes(this.player)) this.wearPlayer(trace);
+    if (this.player && !this.player.retired && active.includes(this.player)) this.wearPlayer(trace, plan.metres.reduce((a, m) => a + m, 0) / 1000);
     return trace;
   }
 
@@ -439,12 +508,12 @@ export class MotoSim {
     return base * this.difficulty(sec, def) * (1 - sim.spread * (perf - 0.5)) * pace * gateBonus * noise;
   }
 
-  private mistake(r: RiderState, def: SectionDef): MistakeOutcome | null {
+  private mistake(r: RiderState, def: SectionDef, share = 1): MistakeOutcome | null {
     const { sim, messageEffects: me } = this.racing;
     const msg = this.message(r);
     const perf = this.performance(r, def);
     const cons = r.e.skills.consistency ?? 1;
-    const p = sim.mistakeBase * def.diff * (1.4 - perf) * Math.max(0.2, 1 + me.paceMistakes * msg.pace) * (1 - (sim.mistakeConsistencyCut * cons) / 99);
+    const p = share * sim.mistakeBase * def.diff * (1.4 - perf) * Math.max(0.2, 1 + me.paceMistakes * msg.pace) * (1 - (sim.mistakeConsistencyCut * cons) / 99);
     if (this.rng() >= p) return null;
     // Risk moves share from small errors to crashes.
     const crashScale = Math.max(0.2, 1 + me.riskCrashShare * msg.risk);
@@ -524,12 +593,11 @@ export class MotoSim {
     this.gain(g);
   }
 
-  /** Distance wear for one lap (Spec 7.3), plus the small chance of a random breakage. */
-  private wearPlayer(trace: LapTrace): void {
+  /** Distance wear for one lap of `km` (Spec 7.3), plus the small chance of a random breakage. */
+  private wearPlayer(trace: LapTrace, km: number): void {
     const bike = this.playerBike;
     if (!bike || !this.player) return;
     const w = this.racing.wear;
-    const km = this.track.sections.reduce((a, s) => a + s.length, 0) / 1000;
     const parts = Object.entries(bike.parts);
     const low = parts.filter(([, p]) => p.condition > 0 && p.condition <= w.lowAt);
     const broken = parts.filter(([, p]) => p.condition <= 0);
@@ -545,7 +613,7 @@ export class MotoSim {
       const pk = w.breakAtFull + (w.breakAtLow - w.breakAtFull) * Math.min(1, (1 - before) / 0.95);
       if (this.rng() < pk * km) {
         part.condition = 0;
-        trace.events.push({ kind: 'breakdown', t: this.player.time, rider: this.player.e.id, section: this.track.sections.length - 1, slot });
+        trace.events.push({ kind: 'breakdown', t: this.player.time, rider: this.player.e.id, section: trace.secs[trace.secs.length - 1], slot });
       }
       if (part.condition > 0 && part.condition < 0.005) part.condition = 0;
     }
