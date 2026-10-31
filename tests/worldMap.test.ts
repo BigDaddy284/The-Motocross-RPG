@@ -18,7 +18,7 @@ describe('the world map (Boss, 28 Oct 2026)', () => {
     expect(zone('int-home-rented-room')).toBe('home');
     expect(zone('area1-industrial-zone')).toBe('iz');
     expect(zone('int-iz-engine-rebuilder')).toBe('iz');
-    for (const v of ['area1-venue-farmland', 'area1-venue-riverside', 'area1-venue-longmoor']) expect(zone(v)).toBe('hub');
+    for (const v of ['venue-motocross', 'venue-supercross', 'venue-enduro']) expect(zone(v)).toBe('hub');
   });
 
   it('has a zone for every area map and every building with a door on one', () => {

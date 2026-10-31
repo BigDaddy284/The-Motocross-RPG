@@ -2,7 +2,7 @@ name: Test and publish
 
 on:
   push:
-    branches: [main, claude/project-thread-yyhrjn]
+    branches: [main, test/v1.5]
   pull_request:
   workflow_dispatch:
 
@@ -11,11 +11,12 @@ permissions:
   pages: write
   id-token: write
 
-# The PR build published beside the main game for testing (Boss, 28 Oct 2026): main stays at the
-# site's address and the preview goes in a folder of its own, with its own saves.
+# The test build published beside the main game (Boss, 28 and 30 Oct 2026): main stays at the
+# site's address and the test branch goes in a folder of its own, with its own saves. Ask Boss
+# before changing PREVIEW_BRANCH or PREVIEW_PATH to a new test version.
 env:
-  PREVIEW_BRANCH: claude/project-thread-yyhrjn
-  PREVIEW_PATH: pr-29
+  PREVIEW_BRANCH: test/v1.5
+  PREVIEW_PATH: test-v1.5
 
 jobs:
   test:
@@ -30,11 +31,11 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  # Builds the site: main at the root and the preview branch in PREVIEW_PATH, so publishing from
-  # either branch keeps both. Runs on pushes to main or the preview branch.
+  # Builds the site: main at the root and the test branch in PREVIEW_PATH, so publishing from
+  # either branch keeps both. Runs on pushes to main or the test branch.
   site:
     needs: test
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/project-thread-yyhrjn')
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test/v1.5')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
       - name: Build main
         working-directory: main
         run: npm ci && npm run build
-      - name: Build the preview into its folder
+      - name: Build the test branch into its folder
         if: steps.preview.outcome == 'success'
         working-directory: preview
         env:
@@ -68,7 +69,7 @@ jobs:
           path: main/dist
 
   # Publishes the playable build to GitHub Pages. Needs Settings > Pages > Source: GitHub Actions,
-  # and the preview branch allowed in Settings > Environments > github-pages.
+  # and the test branch allowed in Settings > Environments > github-pages (deployment branches).
   deploy:
     needs: site
     runs-on: ubuntu-latest

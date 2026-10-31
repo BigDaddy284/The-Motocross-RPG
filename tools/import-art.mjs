@@ -26,9 +26,9 @@ const GID_MASK = 0x1fffffff; // strips Tiled's flip flags
 const AREA_MAPS = [
   'area-map/tiled/maps/area1-home-town.tmj',
   'area-map/tiled/maps/area1-industrial-zone.tmj',
-  'area-map/tiled/maps/area1-venue-farmland.tmj',
-  'area-map/tiled/maps/area1-venue-longmoor.tmj',
-  'area-map/tiled/maps/area1-venue-riverside.tmj',
+  'area-map/tiled/maps/venue-motocross.tmj',
+  'area-map/tiled/maps/venue-enduro.tmj',
+  'area-map/tiled/maps/venue-supercross.tmj',
 ];
 const INTERIOR_DIR = 'buildings/tiled/maps/interiors';
 const BUILDINGS_DATA = 'buildings/data/area1-buildings-v3.json';

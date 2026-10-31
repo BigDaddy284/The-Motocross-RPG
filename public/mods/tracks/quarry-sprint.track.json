@@ -1,0 +1,382 @@
+{
+ "format": "mxrpg-track",
+ "version": 1,
+ "track": {
+  "id": "quarry-sprint",
+  "name": "Quarry Sprint (example mod)",
+  "size": "medium",
+  "surface": "loam",
+  "kind": "enduro_sprint",
+  "width": 2.8,
+  "gates": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "path": [
+   [
+    42,
+    40
+   ],
+   [
+    30,
+    40
+   ],
+   [
+    16,
+    42
+   ],
+   [
+    10,
+    48
+   ],
+   [
+    14,
+    52
+   ],
+   [
+    20,
+    53
+   ],
+   [
+    50,
+    54
+   ],
+   [
+    78,
+    52
+   ],
+   [
+    88,
+    42
+   ],
+   [
+    88,
+    28
+   ],
+   [
+    82,
+    18
+   ],
+   [
+    86,
+    10
+   ],
+   [
+    70,
+    6
+   ],
+   [
+    50,
+    8
+   ],
+   [
+    36,
+    7
+   ],
+   [
+    26,
+    12
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    44,
+    26
+   ],
+   [
+    58,
+    28
+   ],
+   [
+    68,
+    34
+   ],
+   [
+    64,
+    40
+   ]
+  ],
+  "sections": [
+   {
+    "type": "return_lane",
+    "length": 223,
+    "passing": 0
+   },
+   {
+    "type": "straight",
+    "length": 58,
+    "passing": 0.5
+   },
+   {
+    "type": "rocks",
+    "length": 43,
+    "passing": 0.15
+   },
+   {
+    "type": "straight",
+    "length": 43,
+    "passing": 0.5
+   },
+   {
+    "type": "water_crossing",
+    "length": 34,
+    "passing": 0.1
+   },
+   {
+    "type": "straight",
+    "length": 47,
+    "passing": 0.5
+   },
+   {
+    "type": "roots",
+    "length": 54,
+    "passing": 0.2
+   },
+   {
+    "type": "off_camber",
+    "length": 68,
+    "passing": 0.25
+   },
+   {
+    "type": "hill_climb",
+    "length": 67,
+    "passing": 0.2,
+    "height": 5
+   },
+   {
+    "type": "straight",
+    "length": 56,
+    "passing": 0.5
+   },
+   {
+    "type": "hairpin",
+    "length": 43,
+    "passing": 0.3
+   },
+   {
+    "type": "logs",
+    "length": 36,
+    "passing": 0.1
+   },
+   {
+    "type": "straight",
+    "length": 44,
+    "passing": 0.5
+   },
+   {
+    "type": "woods",
+    "length": 163,
+    "passing": 0.05
+   },
+   {
+    "type": "hairpin",
+    "length": 54,
+    "passing": 0.3
+   },
+   {
+    "type": "log_step",
+    "length": 21,
+    "passing": 0.05
+   },
+   {
+    "type": "roots",
+    "length": 31,
+    "passing": 0.2
+   },
+   {
+    "type": "rocks",
+    "length": 38,
+    "passing": 0.15
+   },
+   {
+    "type": "straight",
+    "length": 31,
+    "passing": 0.5
+   },
+   {
+    "type": "mud",
+    "length": 41,
+    "passing": 0.2
+   },
+   {
+    "type": "straight",
+    "length": 27,
+    "passing": 0.5
+   },
+   {
+    "type": "flat_corner",
+    "length": 56,
+    "passing": 0.35
+   },
+   {
+    "type": "berm",
+    "length": 35,
+    "passing": 0.35
+   },
+   {
+    "type": "straight",
+    "length": 106,
+    "passing": 0.5
+   }
+  ],
+  "patches": [],
+  "ground": {
+   "base": "grass",
+   "cell": 2,
+   "paint": {}
+  },
+  "scenery": [
+   {
+    "type": "sprint_start",
+    "x": 20.05,
+    "y": 53,
+    "rot": 96,
+    "text": "QUARRY SPRINT",
+    "color": "#e07020"
+   },
+   {
+    "type": "mx_van",
+    "x": 12,
+    "y": 30,
+    "rot": 90
+   },
+   {
+    "type": "pit_tent",
+    "x": 19,
+    "y": 31
+   },
+   {
+    "type": "motorhome",
+    "x": 12,
+    "y": 22,
+    "rot": 90
+   },
+   {
+    "type": "boulder",
+    "x": 37,
+    "y": 57.5,
+    "variant": "heap"
+   },
+   {
+    "type": "boulder",
+    "x": 42,
+    "y": 50.2,
+    "variant": "pair"
+   },
+   {
+    "type": "boulder",
+    "x": 33.5,
+    "y": 18.5,
+    "variant": "one"
+   },
+   {
+    "type": "boulder",
+    "x": 40,
+    "y": 21.5,
+    "variant": "heap"
+   },
+   {
+    "type": "log_pile",
+    "x": 82,
+    "y": 3.6,
+    "variant": "pile",
+    "rot": 10
+   },
+   {
+    "type": "log_pile",
+    "x": 75,
+    "y": 10.5,
+    "variant": "fallen",
+    "rot": -5
+   },
+   {
+    "type": "log_pile",
+    "x": 22,
+    "y": 16,
+    "variant": "stumps"
+   },
+   {
+    "type": "marshal",
+    "x": 55,
+    "y": 57.8,
+    "variant": "ground"
+   },
+   {
+    "type": "marshal",
+    "x": 92,
+    "y": 36,
+    "variant": "pallet"
+   },
+   {
+    "type": "marshal",
+    "x": 31,
+    "y": 4,
+    "variant": "bales"
+   },
+   {
+    "type": "flagger",
+    "x": 47,
+    "y": 43.2,
+    "variant": "ground"
+   },
+   {
+    "type": "cheer",
+    "x": 53,
+    "y": 36.6
+   },
+   {
+    "type": "cheer",
+    "x": 55,
+    "y": 36.4
+   },
+   {
+    "type": "cheer",
+    "x": 57,
+    "y": 36.8
+   },
+   {
+    "type": "fan_photo",
+    "x": 72,
+    "y": 56.5
+   },
+   {
+    "type": "camp_chairs",
+    "x": 91.5,
+    "y": 47,
+    "rot": -60
+   },
+   {
+    "type": "time_check",
+    "x": 26,
+    "y": 47
+   },
+   {
+    "type": "feather_flags",
+    "x": 24,
+    "y": 57.2
+   },
+   {
+    "type": "ambulance",
+    "x": 6,
+    "y": 40,
+    "rot": 90
+   }
+  ]
+ }
+}

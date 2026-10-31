@@ -152,7 +152,7 @@ describe('driving', () => {
     for (let x = 26; x <= 27; x++) expect(home.isDrivable(x, 22), `${x},22`).toBe(true);
     for (const x of [25, 28]) expect(home.isDrivable(x, 22), `${x},22`).toBe(false);
     expect(home.isDrivable(30, 18)).toBe(true);
-    const river = driveMap('area1-venue-riverside', ALL_FLAGS);
+    const river = driveMap('venue-supercross', ALL_FLAGS);
     // Both sides of the central road, with the crossings into the car parks by the P signs.
     for (const y of [13, 18, 19, 20]) expect(river.isDrivable(11, y), `11,${y}`).toBe(false);
     for (const y of [14, 18, 19, 20]) expect(river.isDrivable(16, y), `16,${y}`).toBe(false);
@@ -179,14 +179,14 @@ describe('driving', () => {
 
   it('parks the Factory Hauler in the Riverside West car park on arrival (Boss, 28 Oct 2026)', () => {
     const hauler = data.designs.find((d) => d.length > 6)!;
-    const bay = bayFor(data, 'area1-venue-riverside', hauler.length)!;
+    const bay = bayFor(data, 'venue-supercross', hauler.length)!;
     expect(bay.name).toBe('Riverside West car park');
-    const dm = driveMap('area1-venue-riverside', ALL_FLAGS);
+    const dm = driveMap('venue-supercross', ALL_FLAGS);
     dm.setVanLength(hauler.length);
     expect(dm.fits(bay, hauler.length)).toBe(true);
     expect(footprint(bay, hauler.length).every((t) => t.x <= 10 && t.y >= 15 && t.y <= 19)).toBe(true);
     // Every other van drives in and finds its own spot.
-    for (const d of data.designs.filter((v) => v.length <= 6)) expect(bayFor(data, 'area1-venue-riverside', d.length), d.id).toBeNull();
+    for (const d of data.designs.filter((v) => v.length <= 6)) expect(bayFor(data, 'venue-supercross', d.length), d.id).toBeNull();
     expect(bayFor(data, HOME, hauler.length)).toBeNull();
   });
 
@@ -197,7 +197,7 @@ describe('driving', () => {
     expect(out).not.toBeNull();
     const end = play(home, data.starter, van.length, out);
     expect(planDrive(home, end, van.length, { x: 30, y: 17 })).not.toBeNull();
-    const river = driveMap('area1-venue-riverside', ALL_FLAGS);
+    const river = driveMap('venue-supercross', ALL_FLAGS);
     const road: VanPose = { x: 13, y: 20, heading: 'north' };
     for (const g of [{ x: 5, y: 17 }, { x: 22, y: 17 }]) expect(planDrive(river, road, van.length, g), `${g.x},${g.y}`).not.toBeNull();
   });
@@ -341,7 +341,7 @@ describe('the one van in the save', () => {
   });
 
   it('keeps the van\'s map, tile and heading through a save and load', () => {
-    const van = { design: 'motor-4', map: 'area1-venue-farmland', x: 20, y: 16, heading: 'north' };
+    const van = { design: 'motor-4', map: 'venue-motocross', x: 20, y: 16, heading: 'north' };
     const s = parseSave(JSON.stringify({ ...v3, version: SAVE_VERSION, van, driving: true }))!;
     expect(s.van).toEqual(van);
     expect(s.driving).toBe(true);
@@ -359,5 +359,27 @@ describe('the one van in the save', () => {
 
   it('every heading has an opposite', () => {
     for (const h of HEADINGS) expect(OPPOSITE[OPPOSITE[h]]).toBe(h);
+  });
+});
+
+describe('the bike on the back (Boss, 30 Oct 2026)', () => {
+  it('gives the Old Rusty Truck a bed point for every parked view and turning frame', () => {
+    const truck = data.designs.find((d) => d.id === 'motor-1')!;
+    expect(truck.bed).toBeDefined();
+    expect(truck.bed!.turn.length).toBe(manifest.vehicles!['motor-1'].turn!.frames.length);
+    // The parked views and the turning frames facing the same way share their bed point.
+    const n = truck.bed!.turn.length;
+    HEADINGS.forEach((h) => expect(truck.bed!.views[h]).toEqual(truck.bed!.turn[({ east: 0, north: 1, west: 2, south: 3 } as const)[h] * (n / 4)]));
+  });
+
+  it('has the bike on its stand in every brand, for both models and all four headings', () => {
+    const missing: string[] = [];
+    for (const b of content.bikes.brands) {
+      for (const model of ['youth', 'adult']) for (const h of HEADINGS) {
+        const img = `assets/art/area-map/tiled/tiles/bike-props/bike-on-stand-${model}-${b.id}-${h}.png`;
+        if (!publicFileExists(img)) missing.push(img);
+      }
+    }
+    expect(missing).toEqual([]);
   });
 });

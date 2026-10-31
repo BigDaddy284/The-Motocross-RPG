@@ -9,7 +9,7 @@
     "zones": [
       { "id": "home", "name": "Home Town", "maps": ["area1-home-town"], "at": [1110, 526], "image": "art/ui/world-map-home.png" },
       { "id": "iz", "name": "Industrial Zone", "maps": ["area1-industrial-zone"], "at": [1345, 502], "image": "art/ui/world-map-iz.png" },
-      { "id": "hub", "name": "Race Hub", "maps": ["area1-venue-farmland", "area1-venue-riverside", "area1-venue-longmoor"], "at": [720, 604] }
+      { "id": "hub", "name": "Race Hub", "maps": ["venue-motocross", "venue-supercross", "venue-enduro"], "at": [720, 604] }
     ]
   },
   "locks": [
@@ -18,16 +18,16 @@
   ],
   "places": [
     { "map": "area1-home-town", "spawn": "from_world_map", "name": "Home Town", "note": "Your rented room, the garage and the shops." },
-    { "map": "area1-venue-farmland", "spawn": "from_world_map", "name": "Farmland MX", "note": "Hard-pack local track. The local champion's favourite." },
-    { "map": "area1-venue-riverside", "spawn": "from_world_map", "name": "Riverside Arena", "note": "Supercross in the arena by the river: tight turns and tuff blocks." },
-    { "map": "area1-venue-longmoor", "spawn": "from_world_map", "name": "Longmoor Enduro", "note": "A long loop under the trees." },
+    { "map": "venue-motocross", "spawn": "from_world_map", "name": "Farmland MX", "note": "Hard-pack local track. The local champion's favourite." },
+    { "map": "venue-supercross", "spawn": "from_world_map", "name": "Riverside Arena", "note": "Supercross in the arena by the river: tight turns and tuff blocks." },
+    { "map": "venue-enduro", "spawn": "from_world_map", "name": "Longmoor Enduro", "note": "A long loop under the trees." },
     { "map": "mod-tracks", "mods": true, "name": "Mod Track", "note": "Race a player-made track: pick one from the list and go straight to the gate." }
   ],
   "routes": [
-    { "map": "area1-home-town", "exit": "To the venue route", "road": "the venue road", "to": ["area1-venue-farmland", "area1-venue-riverside", "area1-venue-longmoor", "mod-tracks"] },
-    { "map": "area1-venue-farmland", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "area1-venue-riverside", "area1-venue-longmoor", "mod-tracks"] },
-    { "map": "area1-venue-riverside", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "area1-venue-farmland", "area1-venue-longmoor", "mod-tracks"] },
-    { "map": "area1-venue-longmoor", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "area1-venue-farmland", "area1-venue-riverside", "mod-tracks"] }
+    { "map": "area1-home-town", "exit": "To the venue route", "road": "the venue road", "to": ["venue-motocross", "venue-supercross", "venue-enduro", "mod-tracks"] },
+    { "map": "venue-motocross", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "venue-supercross", "venue-enduro", "mod-tracks"] },
+    { "map": "venue-supercross", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "venue-motocross", "venue-enduro", "mod-tracks"] },
+    { "map": "venue-enduro", "exit": "To the world map", "road": "the lane", "to": ["area1-home-town", "venue-motocross", "venue-supercross", "mod-tracks"] }
   ],
   "jobs": [
     {

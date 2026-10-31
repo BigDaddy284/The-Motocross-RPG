@@ -206,7 +206,7 @@ Steps:
 3. Put your PNG in it.
 4. Open `tools/map-editor.html` in Chrome or Edge (double-click it, or go to <http://localhost:5173/tools/map-editor.html> while `npm run dev` is running).
 5. Click **Open folder…** and pick the `public` folder inside the game folder.
-6. Pick a map in the list at the top (for example `area1-venue-farmland`).
+6. Pick a map in the list at the top (for example `venue-motocross`).
 7. In the **Palette** list on the right, pick `my-tiles`. Your tile appears.
 8. Click it, then click the map to paint.
 9. Click **Save**.
@@ -220,7 +220,7 @@ Steps:
 
 *The same tile in the game, on Farmland MX.*
 
-> ⚠️ **Do not edit Home Town for practice.** Home Town's map file is protected by a test. Any change to it makes `npm test` fail with "Home Town changed". Practise on another map, such as `area1-venue-farmland`.
+> ⚠️ **Do not edit Home Town for practice.** Home Town's map file is protected by a test. Any change to it makes `npm test` fail with "Home Town changed". Practise on another map, such as `venue-motocross`.
 
 ### 5.2 Map props (objects that stand on the map)
 
@@ -573,7 +573,7 @@ Ground tiles are drawn on a black background. Fill every pixel, or put your see-
 
 1. **Reload the game page.** The game keeps a copy of each map's ground while it is open.
 2. **The map was not saved.** Look for "● unsaved" at the top of the map editor, and click **Save**.
-3. **The saved file went to your Downloads folder.** In browsers other than Chrome and Edge (or if you opened the folder a certain way), Save downloads the file instead, and the button says **Save (download)**. Copy the downloaded file over the one named in the status line, such as `public/assets/maps/area1-venue-farmland.json`.
+3. **The saved file went to your Downloads folder.** In browsers other than Chrome and Edge (or if you opened the folder a certain way), Save downloads the file instead, and the button says **Save (download)**. Copy the downloaded file over the one named in the status line, such as `public/assets/maps/venue-motocross.json`.
 4. **You edited the Tiled source map (`.tmj`) instead of the game map.** Tiled maps only reach the game after `npm run import-art` (read the warning in 5.9 first).
 
 ### My track does not appear under Mod Track

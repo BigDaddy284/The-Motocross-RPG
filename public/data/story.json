@@ -102,7 +102,7 @@
   "after": [
     { "unless": "told.bike_care", "talk": "npc.garage_mechanic", "text": "Pop into Phoenix MX. Paul has some advice about looking after your bike." },
     { "unless": "told.iz_challenge", "talk": "npc.fabricator", "text": "See the fabrication shop boss in the Industrial Zone. There's a troublemaker by the practice yard." },
-    { "unless": "first_race_done", "talk": "npc.track_official", "text": "Race at Farmland MX: sign on with Joseph Halden, the track owner, at the race office. Your first race is free." },
+    { "unless": "first_race_done", "talk": "npc.track_official", "text": "Race at Farmland MX: sign on with Joseph Halden, whose family runs all the tracks, at the race office. Your first race is free." },
     { "unless": "first_race_finished", "text": "Finish both motos of a race day at Farmland MX. Practise on the backyard loop behind your rented room." },
     { "unless": "badge.area1", "text": "Win the Local Champion Championship for the Area 1 badge: enter at any track's race office, under Championships." },
     { "unless": "trophy.area1.main", "text": "You hold the Area 1 badge. The Area 1 Championship comes with Area 2, in a later build: race on, keep the bike sharp, or make your own tracks." }

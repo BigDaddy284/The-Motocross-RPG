@@ -54,7 +54,7 @@ For other kinds of content (tracks, track parts, people, buildings), see the com
 
 - Every map in the game is a grid of **64 × 64 pixel cells**. Farmland MX, for example, is 30 cells wide and 22 cells tall.
 - Each tile is **its own PNG file**. The game does not cut tiles out of big atlas sheets. (Only buildings and people use sheets.)
-- The maps the game loads are in **`public/assets/maps/`**, one file per map, such as `area1-venue-farmland.json`.
+- The maps the game loads are in **`public/assets/maps/`**, one file per map, such as `venue-motocross.json`.
 - The tile pictures the game loads are in **`public/assets/art/`**. Outdoor tiles are in folders under `public/assets/art/area-map/tiled/tiles/`, and indoor tiles under `public/assets/art/buildings/tiled/tiles/`.
 - A map file doesn't contain pictures. It contains a **list of picture paths** (such as `art/area-map/tiled/tiles/terrain-common/grass-plain-1.png`) and, for every cell, **which picture from the list goes there**.
 
@@ -64,7 +64,7 @@ The project keeps two copies of each map. It's worth knowing which is which, bec
 
 | | Game maps | Tiled source maps |
 | --- | --- | --- |
-| Where | `public/assets/maps/*.json`, inside the game folder | The project's shared **art folder** (outside the game folder), for example `art/area-map/tiled/maps/area1-venue-farmland.tmj` |
+| Where | `public/assets/maps/*.json`, inside the game folder | The project's shared **art folder** (outside the game folder), for example `art/area-map/tiled/maps/venue-motocross.tmj` |
 | What reads them | The game, directly | The art import tool, `npm run import-art`, which turns them into game maps |
 | Edit them with | The map editor | The map editor, or the Tiled program |
 | Shows in the game | **Straight away** (after saving and reloading the page) | Only after someone runs `npm run import-art` |
@@ -371,7 +371,7 @@ Rule of thumb: block water, walls, fences and the bottom of props the player sho
 1. Look at **Checks** on the left. It should say **"✓ Every door, spawn, exit and trigger is on a free tile."** If not, it lists what is blocked: free those cells on the Collision layer.
 2. Click **Save** (or **Ctrl+S**).
    - In Chrome and Edge, the file is saved straight into `public/assets/maps/`.
-   - In other browsers the button says **Save (download)**. The file goes to your Downloads folder, and a message says where to copy it, for example over `public/assets/maps/area1-venue-farmland.json`.
+   - In other browsers the button says **Save (download)**. The file goes to your Downloads folder, and a message says where to copy it, for example over `public/assets/maps/venue-motocross.json`.
 3. In the game folder, run `npm test` to check that doors, spawn points and people still work.
 4. Reload the game page.
 
@@ -439,7 +439,7 @@ In this exercise you make a yellowy "dry grass" tile, paint a patch of it at **F
 
 You only change two things, and both can be undone: you add **one new file** in a **new folder**, and you change the **Farmland** map. You don't touch any original tile.
 
-**Before you start:** make a backup copy of `public/assets/maps/area1-venue-farmland.json` somewhere outside the game folder (such as your Desktop). That is the original you will change; with the backup you can always put it back.
+**Before you start:** make a backup copy of `public/assets/maps/venue-motocross.json` somewhere outside the game folder (such as your Desktop). That is the original you will change; with the backup you can always put it back.
 
 ### Step 1: Copy a tile
 
@@ -461,7 +461,7 @@ You only change two things, and both can be undone: you add **one new file** in 
 
 1. Double-click `tools/map-editor.html` to open it in **Chrome** or **Edge**.
 2. Click **Open folder…** and choose the game's **`public`** folder. Allow the browser to see and save to it.
-3. In the map list at the top, choose **`area1-venue-farmland`**.
+3. In the map list at the top, choose **`venue-motocross`**.
 4. On the right, in the **Palette** list, choose **`my-tiles`**.
 
 **What you should see:** your yellow tile in the palette.
@@ -481,12 +481,12 @@ You only change two things, and both can be undone: you add **one new file** in 
 
 1. Click **Save** (or press **Ctrl+S**).
 
-**What you should see:** "● unsaved" disappears, and the message at the bottom says `Saved area1-venue-farmland.json. Run npm test to check doors and spawns.` (or similar). If the button said **Save (download)**, the file went to your Downloads folder: copy `area1-venue-farmland.json` from there over `public/assets/maps/area1-venue-farmland.json`.
+**What you should see:** "● unsaved" disappears, and the message at the bottom says `Saved venue-motocross.json. Run npm test to check doors and spawns.` (or similar). If the button said **Save (download)**, the file went to your Downloads folder: copy `venue-motocross.json` from there over `public/assets/maps/venue-motocross.json`.
 
 ### Step 6: Reopen it to check
 
 1. Close the editor tab and open `tools/map-editor.html` again.
-2. **Open folder…**, choose `public`, and choose `area1-venue-farmland`.
+2. **Open folder…**, choose `public`, and choose `venue-motocross`.
 3. Your patch should still be there. In the Palette list, **Used in this map** now includes `dry-grass-1`.
 
 ### Step 7: Run the checks
@@ -512,7 +512,7 @@ You only change two things, and both can be undone: you add **one new file** in 
 
 To put everything back as it was:
 
-1. Copy your backup over `public/assets/maps/area1-venue-farmland.json`.
+1. Copy your backup over `public/assets/maps/venue-motocross.json`.
 2. Delete the `my-tiles` folder (or keep it for your next tile).
 
 ---

@@ -1,5 +1,5 @@
 import type { TrackDef } from './race';
-import { lapGeom, lapMetres, pointAt, sectionBounds, type LapGeom } from './trackGeom';
+import { GRID_H, GRID_W, gridOf, lapGeom, lapMetres, pointAt, sectionBounds, type LapGeom } from './trackGeom';
 
 // Ground elevation the track editor paints: raised and lowered ground under and around a track.
 // A track stores it as heights in metres at the corners of a square lattice (`step` grid units
@@ -65,9 +65,6 @@ export function trackLevel(track: TrackDef, g: LapGeom, el: Elevation, f: number
   return el.at(p.x, p.y) + hillsAt(track.hills, u, g.total);
 }
 
-/** The track grid (trackParts GRID_W × GRID_H): past its edges the ground keeps the height at the edge. */
-const EDGE_W = 100;
-const EDGE_H = 60;
 /** Highest and lowest the editor lets ground go, in metres: ±36 (1.5 times the ±24 it was). */
 export const ELEV_MAX = 36;
 /** Steepest the ground may be anywhere before it's an error (a wall), as a rise over run: 45°. */
@@ -80,7 +77,11 @@ export class Elevation {
   readonly step: number;
   private readonly h = new Map<number, number>();
   readonly empty: boolean;
-  constructor(e: TrackElevation | undefined) {
+  constructor(
+    e: TrackElevation | undefined,
+    /** The track grid (trackGeom.gridOf): past its edges the ground keeps the height at the edge. */
+    private readonly grid: { w: number; h: number } = { w: GRID_W, h: GRID_H },
+  ) {
     this.step = e?.step ?? 2;
     for (const [x, y, m] of e?.points ?? []) if (m) this.h.set(key(Math.round(x / this.step), Math.round(y / this.step)), m);
     this.empty = this.h.size === 0;
@@ -94,8 +95,8 @@ export class Elevation {
   /** The ground's height in metres at a point on the grid. */
   at(x: number, y: number): number {
     if (this.empty) return 0;
-    const gx = Math.max(0, Math.min(EDGE_W, x)) / this.step;
-    const gy = Math.max(0, Math.min(EDGE_H, y)) / this.step;
+    const gx = Math.max(0, Math.min(this.grid.w, x)) / this.step;
+    const gy = Math.max(0, Math.min(this.grid.h, y)) / this.step;
     const i = Math.floor(gx);
     const j = Math.floor(gy);
     const fx = gx - i;
@@ -148,12 +149,13 @@ export function elevationIssues(track: TrackDef, mpu: number, along: { x: number
     if (!Number.isFinite(m) || Math.abs(m) > ELEV_MAX) out.push({ level: 'error', message: `the ground at ${x}, ${y} is ${m} m; it can be ${ELEV_MAX} m up or down at most`, x, y });
     if (x % e.step !== 0 || y % e.step !== 0) out.push({ level: 'error', message: `the height at ${x}, ${y} is not on the ${e.step}-unit lattice`, x, y });
   }
-  const el = new Elevation(e);
+  const grid = gridOf(track);
+  const el = new Elevation(e, grid);
   // The race view draws the track TRACK_METRES (8) wide, DEFAULT_TRACK_WIDTH (3.4) grid units unless set.
   const run = (e.step * 8) / (track.width ?? 3.4);
   const seen = new Set<string>();
-  const lastI = Math.floor(EDGE_W / e.step);
-  const lastJ = Math.floor(EDGE_H / e.step);
+  const lastI = Math.floor(grid.w / e.step);
+  const lastJ = Math.floor(grid.h / e.step);
   for (const [x, y] of e.points) {
     const i = Math.round(x / e.step);
     const j = Math.round(y / e.step);
@@ -187,7 +189,7 @@ function hillSpot(track: TrackDef, h: TrackHill): { x: number; y: number } {
 /** The lap every half grid unit with the track's level under its middle (ground and hills), in riding order (lap metres per grid unit in mpu). */
 export function lapProfile(track: TrackDef): { mpu: number; along: { x: number; y: number; m: number }[] } {
   const g = lapGeom(track.path);
-  const el = new Elevation(track.elevation);
+  const el = new Elevation(track.elevation, gridOf(track));
   const n = Math.max(40, Math.ceil(g.total / 0.5));
   const along = [];
   for (let i = 0; i <= n; i++) {
@@ -210,7 +212,7 @@ export const DROP_GAIN = 0.5;
 export function sectionGrades(track: TrackDef): number[] {
   if (!track.elevation?.points.length && !track.hills?.length) return track.sections.map(() => 1);
   const g = lapGeom(track.path);
-  const el = new Elevation(track.elevation);
+  const el = new Elevation(track.elevation, gridOf(track));
   const b = sectionBounds(track);
   return track.sections.map((sec, si) => {
     const steps = Math.max(4, Math.ceil(((b[si + 1] - b[si]) * g.total) / 0.5));

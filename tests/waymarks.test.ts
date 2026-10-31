@@ -45,8 +45,8 @@ describe('tutorial markers (Boss, 28 Oct 2026)', () => {
   });
 
   it("doesn't send the rider down a road that is still shut", () => {
-    expect(hop('area1-home-town', 'area1-venue-farmland')).toBeNull();
-    expect(hop('area1-home-town', 'area1-venue-farmland', { van_loaded: true })).toMatchObject({ kind: 'exit', to: 'area1-venue-farmland' });
+    expect(hop('area1-home-town', 'venue-motocross')).toBeNull();
+    expect(hop('area1-home-town', 'venue-motocross', { van_loaded: true })).toMatchObject({ kind: 'exit', to: 'venue-motocross' });
   });
 
   it('points to the work benches while short of the van money, then back to the van seller at £600 (Boss, 28 Oct 2026)', () => {

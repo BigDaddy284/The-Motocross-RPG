@@ -1,0 +1,162 @@
+{
+ "format": "mxrpg-track",
+ "version": 1,
+ "track": {
+  "id": "takedown-strip",
+  "name": "Takedown Strip (example mod)",
+  "size": "medium",
+  "surface": "hard_pack",
+  "kind": "no_turn",
+  "width": 4,
+  "gates": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "path": [
+   [
+    184,
+    15
+   ],
+   [
+    192,
+    15
+   ],
+   [
+    192,
+    55
+   ],
+   [
+    14,
+    55
+   ],
+   [
+    14,
+    15
+   ],
+   [
+    16,
+    15
+   ]
+  ],
+  "start": {
+   "path": [
+    [
+     6,
+     15
+    ],
+    [
+     16,
+     15
+    ]
+   ]
+  },
+  "sections": [
+   {
+    "type": "run_off",
+    "length": 724,
+    "passing": 0.5
+   },
+   {
+    "type": "straight",
+    "length": 30,
+    "passing": 0.5
+   },
+   {
+    "type": "rhythm",
+    "length": 55,
+    "passing": 0.3
+   },
+   {
+    "type": "straight",
+    "length": 25,
+    "passing": 0.5
+   },
+   {
+    "type": "whoops",
+    "length": 50,
+    "passing": 0.2
+   },
+   {
+    "type": "straight",
+    "length": 20,
+    "passing": 0.5
+   },
+   {
+    "type": "triple",
+    "length": 45,
+    "passing": 0.25
+   },
+   {
+    "type": "straight",
+    "length": 25,
+    "passing": 0.5
+   },
+   {
+    "type": "rollers",
+    "length": 40,
+    "passing": 0.3
+   },
+   {
+    "type": "step_up",
+    "length": 30,
+    "passing": 0.3
+   },
+   {
+    "type": "straight",
+    "length": 30,
+    "passing": 0.5
+   },
+   {
+    "type": "tabletop",
+    "length": 104,
+    "passing": 0.3,
+    "finish": true
+   }
+  ],
+  "patches": [],
+  "ground": {
+   "base": "grass",
+   "cell": 2,
+   "paint": {}
+  },
+  "scenery": [
+   {
+    "type": "mx_van",
+    "x": 8,
+    "y": 6,
+    "rot": 0
+   },
+   {
+    "type": "pit_tent",
+    "x": 14,
+    "y": 6
+   },
+   {
+    "type": "motorhome",
+    "x": 8,
+    "y": 25,
+    "rot": 0
+   },
+   {
+    "type": "banner",
+    "x": 60,
+    "y": 10.5,
+    "w": 6,
+    "h": 0.3,
+    "text": "NO-TURN TAKEDOWN",
+    "color": "#c8302a"
+   },
+   {
+    "type": "banner",
+    "x": 120,
+    "y": 19.5,
+    "w": 6,
+    "h": 0.3,
+    "text": "NO-TURN TAKEDOWN",
+    "color": "#c8302a"
+   }
+  ]
+ }
+}

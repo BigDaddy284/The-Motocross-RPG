@@ -51,7 +51,7 @@ describe('championships (Spec 12.5, 18.6)', () => {
   });
 
   it('rejects a round at a venue that has no race day, and a field bigger than its pool', () => {
-    const bad = { championships: [{ ...local, rounds: ['backyard', 'nowhere'], size: 40 }] };
+    const bad = { championships: [{ ...local, rounds: ['backyard', 'nowhere'], size: 60 }] };
     const errs = checkChampionships(bad, content).map((e) => e.field);
     expect(errs).toEqual(expect.arrayContaining(['championships[0].rounds[0]', 'championships[0].rounds[1]', 'championships[0].size']));
   });

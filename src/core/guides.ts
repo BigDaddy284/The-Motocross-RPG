@@ -1,5 +1,6 @@
 import type { PlaceDef, RouteDef, WorldData } from './career';
 import { objectTile, type BakedMap, type MapObject } from './mapTypes';
+import type { VenueDef } from './raceDay';
 import { ROUTE, spawnTile, type Arrival, type Travel } from './travel';
 
 // The roads out of an area: each of its exits, where it goes (another map, or a route with a
@@ -76,4 +77,58 @@ export function routeArrival(map: BakedMap, exit: MapObject, world: WorldData, m
   if (!real.length) return "This road doesn't go anywhere yet.";
   const place = real.find((p) => p.map === pick) ?? real[0];
   return { map: place.map, tile: spawnTile(maps.get(place.map)!, place.spawn!)!, place, others: places.filter((p) => p !== place) };
+}
+
+// ---- the road menu (Boss, 30 Oct 2026) ----
+// Leaving by a route opens one menu: Tracks (by type, then the unlocked tracks of that type, and
+// the unlocked championships), Areas (the places that aren't tracks), Mod Tracks and Not now.
+
+/**
+ * The track types on the road menu, in order, and the trackParts.json kinds each one lists. A
+ * comingSoon type lists nothing and says Coming soon when picked (Boss, 30 Oct 2026).
+ */
+export const ROAD_TRACK_TYPES: { id: string; name: string; kinds: string[]; comingSoon?: boolean }[] = [
+  { id: 'motocross', name: 'Motocross', kinds: ['outdoor'] },
+  { id: 'supercross', name: 'Supercross', kinds: ['stadium'] },
+  { id: 'enduro_loop', name: 'Enduro Loop', kinds: ['endurance'] },
+  { id: 'enduro_sprint', name: 'Enduro Sprint', kinds: ['enduro_sprint'], comingSoon: true },
+  { id: 'endurocross', name: 'EnduroCross', kinds: ['endurocross'], comingSoon: true },
+  { id: 'no_turn', name: 'No-Turn Takedown', kinds: ['no_turn'], comingSoon: true },
+];
+
+export interface RoadMenu {
+  /** One per track type, in ROAD_TRACK_TYPES order, with its unlocked tracks' places. */
+  tracks: { id: string; name: string; comingSoon: boolean; places: PlaceDef[] }[];
+  /** Places on the road that aren't a track: Home Town and the like. */
+  areas: PlaceDef[];
+  /** True when the road has the mod track list. */
+  mods: boolean;
+}
+
+/**
+ * Sorts a road's places into the road menu. A place is a track when a race venue (not a practice
+ * loop) is on its map; it is listed under its track's type once the venue is open (not locked,
+ * and its needs flag set), and left out until then. `kindOf` is the venue's track kind.
+ */
+export function roadMenu(
+  places: PlaceDef[],
+  venues: Pick<VenueDef, 'map' | 'needs' | 'locked' | 'practiceOnly' | 'track'>[],
+  kindOf: (track: string) => string | undefined,
+  flags: Record<string, boolean>,
+): RoadMenu {
+  const tracks = ROAD_TRACK_TYPES.map((t) => ({ id: t.id, name: t.name, comingSoon: !!t.comingSoon, places: [] as PlaceDef[] }));
+  const areas: PlaceDef[] = [];
+  for (const p of places) {
+    if (p.mods) continue;
+    const venue = venues.find((v) => v.map === p.map && !v.practiceOnly);
+    if (!venue) {
+      areas.push(p);
+      continue;
+    }
+    if (venue.locked || (venue.needs && !flags[venue.needs])) continue;
+    const kind = (venue.track && kindOf(venue.track)) || 'outdoor';
+    const i = ROAD_TRACK_TYPES.findIndex((t) => t.kinds.includes(kind));
+    if (i >= 0 && !tracks[i].comingSoon) tracks[i].places.push(p);
+  }
+  return { tracks, areas, mods: places.some((p) => p.mods) };
 }

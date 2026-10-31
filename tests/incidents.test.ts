@@ -56,6 +56,31 @@ describe('first-corner incidents', () => {
   });
 });
 
+describe('loop-outs out of the gate (Boss, 30 Oct 2026)', () => {
+  it('happen in some races, one rider at most, as a crash on the start straight on lap 1 only', () => {
+    let withLoop = 0;
+    const who = new Set<string>();
+    for (let seed = 1; seed <= 60; seed++) {
+      const { traces } = race(seed, 2);
+      const loops = traces.flatMap((tr) => tr.events.filter((e) => e.kind === 'mistake' && e.with === 'loop_out'));
+      expect(loops.length).toBeLessThanOrEqual(1);
+      for (const tr of traces.slice(1)) expect(tr.events.some((e) => e.kind === 'mistake' && e.with === 'loop_out')).toBe(false);
+      for (const e of loops) {
+        if (e.kind !== 'mistake') continue;
+        expect(['minor_crash', 'serious_crash']).toContain(e.outcome);
+        expect(e.section).toBe(-1);
+        // A rider who loops out isn't also caught in the first-corner incident.
+        expect(traces[0].events.some((x) => x.kind === 'mistake' && x.with === 'first_corner' && x.rider === e.rider)).toBe(false);
+        who.add(e.rider);
+        withLoop++;
+      }
+    }
+    expect(withLoop).toBeGreaterThan(60 * 0.1);
+    expect(withLoop).toBeLessThan(60 * 0.6);
+    expect(who.size).toBeGreaterThan(1);
+  });
+});
+
 describe('pile-ups', () => {
   it('sometimes take riders close behind a crash down with it, in the same section, within the window', () => {
     const pile = content.racing.sim.pileup!;
@@ -67,7 +92,7 @@ describe('pile-ups', () => {
         const ms = tr.events.filter((e): e is Extract<typeof e, { kind: 'mistake' }> => e.kind === 'mistake');
         for (const e of ms) {
           if (e.outcome === 'minor_crash' || e.outcome === 'serious_crash') crashes++;
-          if (!e.with || e.with === 'first_corner') continue;
+          if (!e.with || e.with === 'first_corner' || e.with === 'loop_out') continue;
           collected++;
           const cause = ms.find((m) => m.rider === e.with && m.section === e.section);
           expect(cause).toBeDefined();

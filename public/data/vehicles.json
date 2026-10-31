@@ -1,17 +1,54 @@
 {
-  "note": "The player's van (Boss, 24 Oct 2026): one van at a time, part-exchanged when a new one is bought. Seven designs drawn from Boss's reference photos (art/reference/vans). length is the footprint in 64 px tiles along the heading (one tile wide), from the real length at 28 px per metre. drivable lists the ground art a van can use. verges (Boss, 28 Oct 2026, the black lines): on these maps the van keeps off the green car park verges and sticks to the road, going into a car park only by an entrance or a crossing laid over the verge. carParks (Boss, 28 Oct 2026): car parks a van longer than maxLength tiles can't go into, as it couldn't turn round to get out; the Factory Hauler stays on the road. bays (Boss, 28 Oct 2026): where a van of minLength tiles or more is parked on arriving at a map too tight for it to turn on, cab at x, y; it leaves straight out by the map's exit. starter is the van the opening chain sells and where it is parked when bought. name is the in-game name, from Boss's reference file names (the text after \"Van N = \"); motor-1 to motor-7 are only the model numbers (Boss, 28 Oct 2026: motors, not vans), and art names the model's van sheets (art/vehicles/sheets/map/map-van-N), which keep their names.",
+  "note": "The player's van (Boss, 24 Oct 2026): one van at a time, part-exchanged when a new one is bought. Seven designs drawn from Boss's reference photos (art/reference/vans). length is the footprint in 64 px tiles along the heading (one tile wide), from the real length at 28 px per metre. drivable lists the ground art a van can use. verges (Boss, 28 Oct 2026, the black lines): on these maps the van keeps off the green car park verges and sticks to the road, going into a car park only by an entrance or a crossing laid over the verge. carParks (Boss, 28 Oct 2026): car parks a van longer than maxLength tiles can't go into, as it couldn't turn round to get out; the Factory Hauler stays on the road. bays (Boss, 28 Oct 2026): where a van of minLength tiles or more is parked on arriving at a map too tight for it to turn on, cab at x, y; it leaves straight out by the map's exit. starter is the van the opening chain sells and where it is parked when bought. name is the in-game name, from Boss's reference file names (the text after \"Van N = \"); motor-1 to motor-7 are only the model numbers (Boss, 28 Oct 2026: motors, not vans), and art names the model's van sheets (art/vehicles/sheets/map/map-van-N), which keep their names. bed (Boss, 30 Oct 2026: the loaded bike shows on the back of the Old Rusty Truck, in the colours of the player's bike): the middle of an open load bed in each parked view and each turning frame, in sheet pixels from the anchor (the centre of the bed's floor colour), where the bike is drawn once the motor is loaded; straps (Boss, 30 Oct 2026: no stand, black straps to the bed either side behind the cab) are the bed's two front corners, where the tie-downs from the handlebars are hooked.",
   "kerbs": ["roads/street"],
   "drivable": ["roads/street", "terrain-common/road", "gravel", "concrete"],
-  "verges": { "maps": ["area1-home-town", "area1-venue-riverside"], "ground": ["grass-gravel"] },
+  "verges": { "maps": ["area1-home-town", "venue-supercross"], "ground": ["grass-gravel"] },
   "carParks": [
     { "map": "area1-home-town", "name": "Town car park", "area": [25, 15, 11, 8], "maxLength": 6 }
   ],
   "bays": [
-    { "map": "area1-venue-riverside", "name": "Riverside West car park", "x": 10, "y": 17, "heading": "east", "minLength": 7 }
+    { "map": "venue-supercross", "name": "Riverside West car park", "x": 10, "y": 17, "heading": "east", "minLength": 7 }
   ],
   "starter": { "design": "motor-1", "map": "area1-home-town", "x": 30, "y": 20, "heading": "north" },
   "designs": [
-    { "id": "motor-1", "art": "van-1", "name": "Old Rusty Truck Short", "reference": "Motor 1  Old Rusty Truck Short.png", "length": 2, "lengthM": 4.9, "stepMs": 130 },
+    { "id": "motor-1", "art": "van-1", "name": "Old Rusty Truck Short", "reference": "Motor 1  Old Rusty Truck Short.png", "length": 2, "lengthM": 4.9, "stepMs": 130,
+      "bed": {
+        "views": { "north": { "mid": [0, 19], "straps": [[-17, 0], [17, 0]] }, "east": { "mid": [-40, -19], "straps": [[-17, -34], [-18, -8]] }, "south": { "mid": [0, -66], "straps": [[13, -51], [-13, -51]] }, "west": { "mid": [40, -19], "straps": [[16, -8], [16, -34]] } },
+        "turn": [
+        { "mid": [-40, -19], "straps": [[-17, -34], [-18, -8]] },
+        { "mid": [-38, -11], "straps": [[-19, -31], [-15, -4]] },
+        { "mid": [-36, -4], "straps": [[-21, -27], [-12, -1]] },
+        { "mid": [-32, 3], "straps": [[-23, -23], [-7, 1]] },
+        { "mid": [-27, 9], "straps": [[-24, -18], [-3, 3]] },
+        { "mid": [-21, 13], "straps": [[-25, -12], [2, 4]] },
+        { "mid": [-14, 16], "straps": [[-23, -8], [7, 4]] },
+        { "mid": [-7, 18], "straps": [[-21, -4], [12, 4]] },
+        { "mid": [0, 19], "straps": [[-17, 0], [17, 0]] },
+        { "mid": [7, 18], "straps": [[-12, 4], [21, -4]] },
+        { "mid": [14, 16], "straps": [[-7, 4], [23, -8]] },
+        { "mid": [21, 13], "straps": [[-2, 4], [25, -12]] },
+        { "mid": [27, 9], "straps": [[3, 3], [24, -18]] },
+        { "mid": [32, 3], "straps": [[7, 1], [23, -23]] },
+        { "mid": [36, -4], "straps": [[12, -1], [21, -27]] },
+        { "mid": [38, -11], "straps": [[15, -4], [19, -31]] },
+        { "mid": [40, -19], "straps": [[16, -8], [16, -34]] },
+        { "mid": [40, -27], "straps": [[20, -11], [16, -35]] },
+        { "mid": [39, -35], "straps": [[24, -16], [16, -38]] },
+        { "mid": [37, -43], "straps": [[26, -21], [15, -41]] },
+        { "mid": [32, -50], "straps": [[29, -29], [12, -46]] },
+        { "mid": [26, -56], "straps": [[28, -35], [7, -50]] },
+        { "mid": [18, -61], "straps": [[25, -42], [1, -52]] },
+        { "mid": [10, -65], "straps": [[19, -46], [-6, -52]] },
+        { "mid": [0, -66], "straps": [[13, -51], [-13, -51]] },
+        { "mid": [-10, -65], "straps": [[6, -52], [-19, -46]] },
+        { "mid": [-18, -61], "straps": [[-1, -52], [-25, -42]] },
+        { "mid": [-26, -56], "straps": [[-7, -50], [-28, -35]] },
+        { "mid": [-32, -50], "straps": [[-12, -46], [-29, -29]] },
+        { "mid": [-37, -43], "straps": [[-15, -41], [-26, -21]] },
+        { "mid": [-39, -35], "straps": [[-16, -38], [-24, -16]] },
+        { "mid": [-40, -27], "straps": [[-16, -35], [-20, -11]] }
+        ]
+      } },
     { "id": "motor-2", "art": "van-2", "name": "Old Rusty Van", "reference": "Motor 2  Old Rusty Van.png", "length": 2, "lengthM": 4.4, "stepMs": 130 },
     { "id": "motor-3", "art": "van-3", "name": "MX Van Short", "reference": "Motor 3  MX Van Short.png", "length": 2, "lengthM": 5.0, "stepMs": 120 },
     { "id": "motor-4", "art": "van-4", "name": "MX Van Medium", "reference": "Motor 4  MX Van Medium.png", "length": 3, "lengthM": 6.9, "stepMs": 120 },

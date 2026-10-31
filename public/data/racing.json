@@ -21,7 +21,10 @@
     "cleanAir": { "top": 3, "bonusPct": 0.5, "trafficAfter": 10, "penaltyPct": 1.0 },
     "retireAtBroken": 4,
     "firstCorner": { "chance": 0.3, "riders": [1, 3] },
-    "pileup": { "chance": 0.35, "window": 0.8, "most": 3 }
+    "loopOut": { "chance": 0.3 },
+    "pileup": { "chance": 0.35, "window": 0.8, "most": 3 },
+    "sprint": { "interval": 10, "returnSpeed": 0.5 },
+    "knockout": { "seedInterval": 8, "heatSize": 4, "through": 2, "finalRuns": 3, "buff": 0.5, "noise": 0.2 }
   },
   "xp": {
     "sectionFactor": 2.0,
@@ -35,7 +38,7 @@
   "classes": {
     "50cc": { "laps": 5, "entry": 20, "classXp": 1.0, "refSpeed": 11, "youth": true }
   },
-  "kindLaps": { "race": { "endurance": 8 }, "championship": { "outdoor": 8, "endurance": 8 } },
+  "kindLaps": { "race": { "endurance": 8, "enduro_sprint": 8 }, "championship": { "outdoor": 8, "endurance": 8, "enduro_sprint": 8 } },
   "messages": [
     { "id": "steady", "name": "STEADY", "pace": 0, "risk": 0, "overtaking": 0, "consistency": 0, "desc": "Ride your normal race." },
     { "id": "push", "name": "PUSH", "pace": 2, "risk": 2, "overtaking": 1, "consistency": -1, "desc": "About 2% faster, but more mistakes and crashes." },
@@ -77,7 +80,17 @@
     "mud": { "name": "Mud low point", "diff": 1.4, "skills": { "balance": 0.6, "riding_position": 0.4 }, "stats": ["grip", "power"], "riderWeight": 0.55, "damage": "speed", "shapes": ["straight", "sweeper", "corner", "hairpin"] },
     "concrete_straight": { "name": "Concrete straight", "diff": 0.5, "skills": { "riding_position": 1.0 }, "stats": ["power"], "riderWeight": 0.3, "damage": "speed", "shapes": ["straight", "sweeper"] },
     "concrete_corner": { "name": "Concrete corner", "diff": 1.15, "skills": { "cornering": 0.7, "balance": 0.3 }, "stats": ["grip", "braking"], "riderWeight": 0.6, "damage": "corner", "shapes": ["sweeper", "corner", "hairpin"] },
-    "surface_change": { "name": "Concrete to mud", "diff": 1.25, "skills": { "balance": 0.6, "riding_position": 0.4 }, "stats": ["grip", "absorption"], "riderWeight": 0.55, "damage": "speed", "shapes": ["straight", "sweeper"] }
+    "surface_change": { "name": "Concrete to mud", "diff": 1.25, "skills": { "balance": 0.6, "riding_position": 0.4 }, "stats": ["grip", "absorption"], "riderWeight": 0.55, "damage": "speed", "shapes": ["straight", "sweeper"] },
+    "rocks": { "name": "Rock garden", "diff": 1.5, "skills": { "balance": 0.6, "riding_position": 0.4 }, "stats": ["absorption", "grip", "handling"], "riderWeight": 0.65, "damage": "landing", "shapes": ["straight", "sweeper", "corner", "hairpin"] },
+    "logs": { "name": "Log crossing", "diff": 1.4, "skills": { "jumps_ruts": 0.5, "balance": 0.5 }, "stats": ["absorption", "response"], "riderWeight": 0.65, "damage": "landing", "shapes": ["straight", "sweeper"] },
+    "log_step": { "name": "Log step", "diff": 1.3, "skills": { "jumps_ruts": 0.6, "balance": 0.4 }, "stats": ["response", "absorption"], "riderWeight": 0.6, "damage": "landing", "shapes": ["straight"] },
+    "water_crossing": { "name": "Water crossing", "diff": 1.35, "skills": { "balance": 0.5, "riding_position": 0.5 }, "stats": ["grip", "power"], "riderWeight": 0.5, "damage": "speed", "shapes": ["straight", "sweeper"] },
+    "roots": { "name": "Tree roots", "diff": 1.3, "skills": { "balance": 0.6, "cornering": 0.4 }, "stats": ["grip", "handling"], "riderWeight": 0.6, "damage": "corner", "shapes": ["straight", "sweeper", "corner", "hairpin"] },
+    "off_camber": { "name": "Off-camber", "diff": 1.3, "skills": { "cornering": 0.6, "balance": 0.4 }, "stats": ["grip", "handling"], "riderWeight": 0.6, "damage": "corner", "shapes": ["straight", "sweeper", "corner"] },
+    "hill_climb": { "name": "Hill climb", "diff": 1.5, "skills": { "riding_position": 0.6, "balance": 0.4 }, "stats": ["power", "grip", "response"], "riderWeight": 0.45, "damage": "speed", "shapes": ["straight", "sweeper"] },
+    "woods": { "name": "Woods singletrack", "diff": 1.25, "skills": { "cornering": 0.5, "balance": 0.3, "riding_position": 0.2 }, "stats": ["handling", "braking"], "riderWeight": 0.65, "damage": "corner", "shapes": ["straight", "sweeper", "corner", "hairpin"] },
+    "return_lane": { "name": "Return lane", "diff": 1.0, "skills": { "riding_position": 1.0 }, "stats": ["power"], "riderWeight": 0.3, "damage": "speed", "shapes": ["straight", "sweeper", "corner", "hairpin"] },
+    "run_off": { "name": "Run-off", "diff": 1.0, "skills": { "riding_position": 1.0 }, "stats": ["power"], "riderWeight": 0.3, "damage": "speed", "shapes": ["straight", "sweeper", "corner", "hairpin"] }
   },
   "damageSlots": {
     "landing": ["forks", "shock", "wheels_tyres"],

@@ -18,7 +18,7 @@ function rider(condition: number): CareerState {
 }
 
 /** The challenge on a track that exists, to race it before its own track is built. */
-const onFarmland = (def: ChallengeDef): ChallengeDef => ({ ...def, track: 'farmland', map: 'area1-venue-farmland' });
+const onFarmland = (def: ChallengeDef): ChallengeDef => ({ ...def, track: 'farmland', map: 'venue-motocross' });
 
 describe('challenges (Boss, 28 Oct 2026)', () => {
   it('walks off with a general hint after a loss: the bike in Area 1, or just unlucky when it is in good shape', () => {

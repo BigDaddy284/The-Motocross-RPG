@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { newCareerState } from '../core/career';
+import { newCareerState, pence } from '../core/career';
 import type { SaveData } from '../core/saves';
 import { spawnTile } from '../core/travel';
 import { CAREER_SLOT, services } from '../services';
@@ -37,6 +37,11 @@ export function startCareer(scene: Phaser.Scene, slot: string): void {
   c.add(button(scene, r.backup ? 130 : 0, 90, 'Cancel', () => c.destroy(), 220, 42));
 }
 
+// TEST ONLY, REMOVE BEFORE RELEASE (Boss, 28 Oct 2026): a new rider named "moneymoneymoney" starts
+// with £50,000 for testing. Listed under "Before release" in the README.
+const TEST_MONEY_NAME = 'moneymoneymoney';
+const TEST_MONEY = 50000;
+
 /** A fresh career at the Home Town new-game spawn. Overwrites slot 1, keeping it as backup 1. */
 export function newCareer(scene: Phaser.Scene, pick: { look: string; name: string; brand: string }): void {
   const home = services.maps.get(START_MAP)!;
@@ -51,6 +56,7 @@ export function newCareer(scene: Phaser.Scene, pick: { look: string; name: strin
     van: null,
     driving: false,
   };
+  if (pick.name.toLowerCase() === TEST_MONEY_NAME) data.career.money = pence(TEST_MONEY); // TEST ONLY, REMOVE BEFORE RELEASE
   const saved = services.saves.write(CAREER_SLOT, data);
   scene.scene.start('world', { save: saved, intro: true });
 }

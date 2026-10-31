@@ -58,6 +58,12 @@ export const DEFAULT_HEIGHTS: Record<string, number> = {
   dragon_back: 2.2,
   uphill: 6,
   downhill: 6,
+  // Enduro sections (Boss, 29 Oct 2026): a hill climb's crest, and the size of the rocks, roots and logs.
+  hill_climb: 5,
+  rocks: 0.35,
+  roots: 0.18,
+  logs: 0.4,
+  log_step: 0.6,
 };
 
 const peak = (a: number, b: number, c: number, d: number, h = 1): Peak => ({ a, b, c, d, h });

@@ -96,6 +96,13 @@ kbd { font: 11px ui-monospace, monospace; background: #0005; border: 1px solid v
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; max-width: 560px; }
 dialog::backdrop { background: #0008; }
 dialog li { margin: 3px 0; color: var(--dim); }
+#checkDlg { max-width: 680px; }
+#checkList { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; }
+#checkList label { align-items: flex-start; color: var(--text); padding: 6px 8px; border-radius: 6px; background: var(--panel2); border-left: 3px solid var(--line); }
+#checkList label input { margin-top: 2px; }
+#checkList .add { border-left-color: var(--ok); }
+#checkList .remove { border-left-color: var(--danger); }
+#checkList .fix, #checkList .warn { border-left-color: var(--accent); }
 input[type=file] { display: none; }
 #bldThumb { display: block; width: 100%; height: 96px; margin: 4px 0; background: #111; border-radius: 4px; }
 #bldBox .row { margin-bottom: 4px; }
@@ -170,6 +177,7 @@ body.mode-buildings #bldStudio { display: grid; grid-template-columns: 360px 1fr
   <button id="btnOpen" class="primary" title="Pick the repo, public/assets, or the art folder">Open folder…</button>
   <input type="file" id="dirInput" webkitdirectory multiple>
   <select id="mapSelect" disabled><option>No folder open</option></select>
+  <button class="maponly" id="btnNewMap" title="Start a new map from this one: its ground, collision, props and spawns, without its buildings, doors, people and triggers">New map…</button>
   <span class="sep maponly"></span>
   <button class="maponly" id="btnSave" disabled title="Ctrl+S">Save</button>
   <button class="maponly" id="btnDownload" disabled title="Download the map file">Download</button>
@@ -183,6 +191,7 @@ body.mode-buildings #bldStudio { display: grid; grid-template-columns: 360px 1fr
   <button class="maponly" id="btnZoomIn" title="Zoom in (+)">+</button>
   <button class="maponly" id="btnFit" title="Fit the whole map (0)">Fit</button>
   <span class="grow"></span>
+  <button id="btnCheck" title="Compare the game's map list and building library with what's in the folders, and offer to fix any difference">Check files</button>
   <button id="btnHelp">Help</button>
 </header>
 
@@ -295,6 +304,21 @@ body.mode-buildings #bldStudio { display: grid; grid-template-columns: 360px 1fr
   <span id="msg"></span>
 </footer>
 
+<dialog id="newMapDlg">
+  <h3 style="margin-top:0">New map</h3>
+  <p class="hint">A new area map from <b id="nmFrom"></b>: its ground, collision, props and spawns are copied; its buildings, doors, people and triggers are left out, since each can be on one map only.</p>
+  <label class="chk" style="display:grid;grid-template-columns:110px 1fr;gap:6px">Name <input type="text" id="nmName" placeholder="Riverside Town"></label>
+  <label class="chk" style="display:grid;grid-template-columns:110px 1fr;gap:6px;margin-top:6px">On the world map <span id="nmZone"></span></label>
+  <div class="row" style="margin-top:12px"><button id="nmMake" class="primary">Make the map</button><button id="nmCancel">Cancel</button></div>
+</dialog>
+
+<dialog id="checkDlg">
+  <h3 style="margin-top:0">File check</h3>
+  <p class="hint">The game's lists (its map list and building library) don't match what's in the folders. Untick anything you don't want changed.</p>
+  <div id="checkList"></div>
+  <div class="row" style="margin-top:10px"><button id="checkApply" class="primary">Apply ticked</button><button id="checkLater">Not now</button></div>
+</dialog>
+
 <dialog id="help">
   <h3 style="margin-top:0">Map editor help</h3>
   <ul>
@@ -305,6 +329,7 @@ body.mode-buildings #bldStudio { display: grid; grid-template-columns: 360px 1fr
     <li><b>Select</b> <kbd>M</kbd>: drag a box. Drag inside it to move it, <kbd>Alt</kbd>+drag to move a copy. <kbd>Ctrl+C</kbd>/<kbd>X</kbd>/<kbd>V</kbd> copy, cut and paste (click to place). <kbd>Del</kbd> clears. <b>Swap with…</b> exchanges two regions. <kbd>Esc</kbd> cancels.</li>
     <li><b>Objects</b> <kbd>V</kbd>: click a prop or marker to select it, drag to move (snaps to the grid; hold <kbd>Alt</kbd> for pixels), <kbd>Del</kbd> deletes a prop. With a prop picked in the palette, click empty ground to place it on the active props layer. Buildings and their doors move together: click one and use Move, or the Select tool.</li>
     <li><b>Tabs:</b> <b>Map</b> edits the map; <b>Tiles</b> draws and changes tiles (saved to <code>public/assets/custom/tiles</code> and added to the palette); <b>Buildings</b> edits the building library, with pictures you draw or import. With <code>npm run dev</code> and <b>Load the game maps from this server</b>, Save writes straight into the game.</li>
+    <li><b>New map…</b> copies the open area map's ground, collision, props and spawns into a new map and adds it to the game. <b>Check files</b> (also run on opening) finds map files that aren't in the game's map list, listed maps whose file is gone, and building pictures not in the library, and offers to fix each.</li>
     <li><b>Markers:</b> pick Spawn, Exit, Door, Block zone, Gate, Travel, Venue, NPC or Interact on the left and click the map (drag for an area). Set it up on the right: where an exit leads, the flag that lifts a block zone and the tile drawn when it's cleared, and so on. Click a marker with Objects (<kbd>V</kbd>) to change it, drag to move it, <kbd>Del</kbd> deletes it.</li>
     <li><b>Tiles tab:</b> Pencil <kbd>P</kbd>, Eraser <kbd>E</kbd>, Fill <kbd>F</kbd>, Picker <kbd>I</kbd> (or <kbd>Alt</kbd>+click), Line <kbd>L</kbd>, Box <kbd>R</kbd> (<kbd>Shift</kbd> fills). <b>Seams</b> brings a tile's edges to the middle to fix how it joins itself. <kbd>Ctrl+S</kbd> saves the tile.</li>
     <li><b>Buildings:</b> pick one from the list and <b>Place</b> it: it follows the pointer, green where it fits and red with the reason where it doesn't; click to set it down, <kbd>Esc</kbd> cancels. Placing writes its pictures, doors, returns and solid tiles. Click a placed building to <b>Move</b>, <b>Replace</b> or <b>Remove</b> it (<kbd>Del</kbd>). <b>Edit</b> and <b>New</b> open it in the Buildings tab: its footprint (any size or shape), its pictures (draw one, import a PNG, or edit one), its doors and returns and its interior. They are saved in <code>public/data/buildings.json</code>; open the repo folder (or <code>public</code>) so the editor can find it.</li>
@@ -502,12 +527,17 @@ class ListSource {
 
 class HttpSource {
   constructor(base, mapPaths) { this.base = base; this.name = base; this.files = new Map(mapPaths.map((p) => [p, true])); this.canWrite = false; this.http = true; }
-  /** On `npm run dev` the server saves too (vite.config.ts, /__toolkit/), and lists the pictures made here. */
+  /**
+   * On `npm run dev` the server saves too (vite.config.ts, /__toolkit/), and lists the map files
+   * really in the maps folder (not only the manifest's) and the pictures made here.
+   */
   async scan() {
     try {
-      const r = await fetch('/__toolkit/pictures');
+      const r = await fetch('/__toolkit/files');
       if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return;
-      for (const p of await r.json()) this.files.set(p, true);
+      const { maps, pictures } = await r.json();
+      for (const p of [...this.files.keys()]) if (/^maps\/[^/]+\.json$/.test(p)) this.files.delete(p);
+      for (const p of [...maps, ...pictures]) this.files.set(p, true);
       this.canWrite = true;
       this.name = 'the game (npm run dev)';
     } catch { /* a published site: read only */ }
@@ -660,7 +690,7 @@ $('#dirInput').addEventListener('change', async (e) => {
   await useSource(src);
 });
 
-async function useSource(src) {
+async function useSource(src, { check = true, open } = {}) {
   const catalog = [];
   const bakedAssets = new Set();
   for (const p of src.files.keys()) {
@@ -700,9 +730,10 @@ async function useSource(src) {
   $('#welcome').style.display = 'none';
   await loadLibrary();
   await loadKnown();
-  const first = catalog.find((c) => c.format === 'baked' && stem(c.path) === 'area1-home-town') ?? catalog.find((c) => /home-town/.test(c.path)) ?? catalog[0];
+  const first = catalog.find((c) => c.path === open) ?? catalog.find((c) => c.format === 'baked' && stem(c.path) === 'area1-home-town') ?? catalog.find((c) => /home-town/.test(c.path)) ?? catalog[0];
   sel.value = first.path;
   await openMap(first);
+  if (check) await fileCheck(false);
 }
 
 $('#mapSelect').addEventListener('change', async (e) => {
@@ -1795,17 +1826,18 @@ const MARKER_TYPES = {
   interact: { label: 'Interact', what: 'Something the player can use, like a desk PC or a noticeboard. The story and the shops look for its action.', fields: [['action', 'text', 'Action'], ['on_wall', 'bool', 'On a wall']] },
 };
 /** Ids the marker fields suggest, gathered from the game's data and maps. */
-const known = { flags: new Set(), npcs: [], venues: [] };
+const known = { flags: new Set(), npcs: [], venues: [], world: null };
 
 async function loadKnown() {
-  known.flags = new Set(); known.npcs = []; known.venues = [];
+  known.flags = new Set(); known.npcs = []; known.venues = []; known.world = null;
   if (!lib.path) return;
   const dir = dirOf(lib.path);
-  const read = async (f) => { const p = joinPath(dir, f); try { return source.has(p) ? await source.text(p) : null; } catch { return null; } };
+  const read = async (f) => { const p = dir ? `${dir}/${f}` : f; /* not joinPath: over http the folder is ../data */ try { return source.has(p) ? await source.text(p) : null; } catch { return null; } };
   const story = await read('story.json');
   if (story) for (const m of story.matchAll(/"flags":\s*\[([^\]]*)\]/g)) for (const f of m[1].matchAll(/"([^"]+)"/g)) known.flags.add(f[1]);
   try { known.npcs = JSON.parse(await read('npcs.json')).npcs.map((n) => n.id); } catch { /* none */ }
   try { known.venues = JSON.parse(await read('tracks.json')).venues.map((v) => v.id); } catch { /* none */ }
+  try { const text = await read('world.json'); if (text) known.world = { text, data: JSON.parse(text), path: dir ? `${dir}/world.json` : 'world.json' }; } catch { /* none */ }
   for (const m of lib.maps.values()) for (const o of m.objects ?? []) for (const k of ['cleared_by', 'unlock']) if (typeof o.props?.[k] === 'string') known.flags.add(o.props[k]);
 }
 
@@ -2008,7 +2040,7 @@ async function loadLibrary() {
     lib.manifestPath = joinPath(lib.assets, 'manifest.json');
     try { const t = await source.text(lib.manifestPath); lib.manifest = JSON.parse(t); lib.manifestNl = t.endsWith('\n'); } catch { lib.manifest = null; }
     for (const c of baked) {
-      try { const m = JSON.parse(await source.text(c.path)); lib.maps.set(m.id, { kind: m.kind, objects: m.objects, props: m.props, title: m.title, path: c.path }); } catch { /* skip */ }
+      try { const m = JSON.parse(await source.text(c.path)); lib.maps.set(stem(c.path), { kind: m.kind, objects: m.objects, props: m.props, title: m.title, path: c.path }); } catch { /* skip */ }
     }
     const cands = source.http ? ['../data/buildings.json'] : [joinPath(dirOf(lib.assets), 'data/buildings.json')];
     for (const p of cands) {
@@ -3917,6 +3949,305 @@ $('#bPicCancel').addEventListener('click', () => { if (pad.dirty && !confirm('Lo
 $('#bDrawPic').addEventListener('click', () => bedEditPicture(-1));
 $('#bImportPic').addEventListener('click', async () => { const got = await pickPng(); if (got) bedEditPicture(-1, got.img); });
 
+
+// --- The world map ---------------------------------------------------------------------------------
+// Every area map is in a zone of the world map (data/world.json worldMap.zones), where the rider's
+// bike is shown while they are on it. A new map goes into a zone picked here, or a new zone of its
+// own at the middle of the world map (with no picture of its own until one is drawn).
+
+function zoneOf(mapId) { return known.world?.data.worldMap?.zones.find((z) => z.maps.includes(mapId)) ?? null; }
+
+/** A zone picker: the world map's zones, and a new zone named after the map. */
+function zoneSelect(title, current) {
+  const sel = document.createElement('select');
+  const zones = known.world?.data.worldMap?.zones ?? [];
+  for (const z of zones) sel.appendChild(Object.assign(document.createElement('option'), { value: z.id, textContent: `World map zone: ${z.name}` }));
+  sel.appendChild(Object.assign(document.createElement('option'), { value: '@new', textContent: `A new world map zone: ${title}` }));
+  sel.value = current && zones.some((z) => z.id === current) ? current : '@new';
+  return sel;
+}
+
+/** Puts a map in a zone (an id, or '@new' for one of its own). */
+function putInZone(mapId, title, choice) {
+  const wm = known.world?.data.worldMap;
+  if (!wm) return false;
+  for (const z of wm.zones) z.maps = z.maps.filter((m) => m !== mapId);
+  wm.zones = wm.zones.filter((z) => z.maps.length);
+  if (choice !== '@new' && wm.zones.some((z) => z.id === choice)) wm.zones.find((z) => z.id === choice).maps.push(mapId);
+  else {
+    let id = slug(title).replace(/-/g, '_');
+    for (let n = 2; wm.zones.some((z) => z.id === id); n++) id = `${slug(title).replace(/-/g, '_')}_${n}`;
+    wm.zones.push({ id, name: title, maps: [mapId], at: [Math.round(wm.size[0] / 2), Math.round(wm.size[1] / 2)] });
+  }
+  return true;
+}
+function takeOutOfZones(mapId) {
+  const wm = known.world?.data.worldMap;
+  if (!wm || !zoneOf(mapId)) return false;
+  for (const z of wm.zones) z.maps = z.maps.filter((m) => m !== mapId);
+  wm.zones = wm.zones.filter((z) => z.maps.length);
+  return true;
+}
+
+/** world.json as the repo keeps it: only the zones list is rewritten, one zone a line. */
+async function saveWorld() {
+  const w = known.world;
+  const line = (z) => `{ ${Object.entries(z).map(([k, v]) => `${JSON.stringify(k)}: ${Array.isArray(v) ? `[${v.map((x) => JSON.stringify(x)).join(', ')}]` : JSON.stringify(v)}`).join(', ')} }`;
+  const m = /("zones": \[\n)([\s\S]*?)(\n(\s*)\])/.exec(w.text);
+  const text = m
+    ? w.text.slice(0, m.index) + m[1] + w.data.worldMap.zones.map((z) => `${m[4]}  ${line(z)}`).join(',\n') + m[3] + w.text.slice(m.index + m[0].length)
+    : `${JSON.stringify(w.data, null, 2)}\n`;
+  w.text = text;
+  return writeFile(w.path, text);
+}
+
+// --- New maps --------------------------------------------------------------------------------------
+// A copy of an area map keeps its ground, collision, props and spawns, but not what the game allows
+// on one map only: buildings lead into interiors no other map may lead into, people stand on one map,
+// and a road out (to world_map) needs its own route in data/world.json. Those are cleared out, so the
+// copy passes the game's checks and starts as a blank town to build on.
+
+const ONE_MAP_ONLY = new Set(['building', 'door', 'return', 'click', 'npc', 'interact', 'venue', 'travel']);
+
+/** Clears a copied baked map of what can stand on one map only. Returns what went, as words. */
+function clearCopy(raw) {
+  const T = raw.tileSize ?? TILE;
+  const gone = { buildings: 0, other: 0 };
+  const dropSprites = new Set();
+  for (const o of raw.objects.filter((x) => x.type === 'building')) {
+    gone.buildings++;
+    const def = libDef(String(o.props?.blueprint ?? ''));
+    const tx = Math.floor(o.x / T), ty = Math.floor(o.y / T);
+    const cells = def ? fpCells(def).filter((c) => c.solid).map((c) => [tx + c.x, ty + c.y]) : [];
+    if (!def) for (let y = 0; y < Math.round(o.h / T); y++) for (let x = 0; x < Math.round(o.w / T); x++) cells.push([tx + x, ty + y]);
+    for (const [x, y] of cells) if (raw.blocked[y]?.[x] === '#') raw.blocked[y] = raw.blocked[y].slice(0, x) + '.' + raw.blocked[y].slice(x + 1);
+    raw.sprites.forEach((s, i) => {
+      if (!s.crop) return;
+      const mine = def ? def.parts.some((p) => s.x === (tx + p.at[0]) * T && s.y === (ty + p.at[1]) * T && p.crop.join() === s.crop.join()) : s.x >= o.x && s.y >= o.y && s.x < o.x + o.w && s.y < o.y + o.h;
+      if (mine) dropSprites.add(i);
+    });
+  }
+  raw.sprites = raw.sprites.filter((_, i) => !dropSprites.has(i));
+  raw.objects = raw.objects.filter((o) => {
+    const drop = (ONE_MAP_ONLY.has(o.type)) || (o.type === 'exit' && o.props?.to === 'world_map');
+    if (drop && o.type !== 'building') gone.other++;
+    return !drop;
+  });
+  return `${gone.buildings} building${gone.buildings === 1 ? '' : 's'} and ${gone.other} door${gone.other === 1 ? '' : 's'}, people and triggers`;
+}
+
+/** Interiors a map's buildings lead into that another listed map's buildings already do. */
+function sharedInteriors(raw) {
+  const mine = new Set(raw.objects.filter((o) => o.type === 'door').map((o) => o.props?.interior));
+  const out = [];
+  for (const [id, m] of lib.maps) {
+    if (id === raw.id || !lib.manifest.maps.some((x) => x.id === id)) continue;
+    for (const o of m.objects ?? []) if (o.type === 'door' && mine.has(o.props?.interior)) out.push(o.props.interior);
+  }
+  return [...new Set(out)];
+}
+
+async function newMap() {
+  const doc = app.doc;
+  if (!doc || doc.format !== 'baked' || !lib.manifest) { status('Open a game map first.', 'err'); return; }
+  if (doc.raw.kind === 'interior') { status('For a new interior, open the building in the Buildings tab and use New interior from this.', 'err'); return; }
+  const got = await askNewMap(doc);
+  if (!got) return;
+  const { title, zone } = got;
+  const prefix = /^area\d+-/.exec(doc.name)?.[0] ?? '';
+  let id = `${prefix}${slug(title)}`;
+  for (let n = 2; lib.manifest.maps.some((m) => m.id === id) || source.has(joinPath(lib.assets, `maps/${id}.json`)); n++) id = `${prefix}${slug(title)}-${n}`;
+  const raw = JSON.parse(exportBaked(doc));
+  const what = clearCopy(raw);
+  Object.assign(raw, { id, title: title.trim(), props: { ...raw.props, title: title.trim() } });
+  const path = joinPath(lib.assets, `maps/${id}.json`);
+  const ok = await writeFile(path, `${JSON.stringify(raw)}\n`, true);
+  lib.manifest.maps.push({ id, title: title.trim(), kind: 'area' });
+  await writeFile(lib.manifestPath, `${JSON.stringify(lib.manifest, null, 1)}${lib.manifestNl ? '\n' : ''}`);
+  if (putInZone(id, title.trim(), zone)) await saveWorld();
+  if (!ok) { status(`Downloaded ${id}.json and manifest.json: put them in public/assets/maps and public/assets, then reopen the editor.`, 'ok'); return; }
+  if (app.dirty) setDirty(false);
+  await useSource(source, { check: false, open: path });
+  status(`Made ${title.trim()} (${id}), without ${what}. Add an exit to it from another map (Markers, Exit, To ${id}) so players can get there.`, 'ok');
+}
+/** Asks the new map's name and world map zone; null if cancelled. */
+function askNewMap(doc) {
+  const dlg = $('#newMapDlg');
+  $('#nmFrom').textContent = doc.raw.title ?? doc.name;
+  $('#nmName').value = '';
+  const host = $('#nmZone');
+  host.innerHTML = '';
+  const sel = zoneSelect('(its name)', zoneOf(doc.name)?.id);
+  host.appendChild(sel);
+  host.hidden = !known.world;
+  return new Promise((resolve) => {
+    const done = (v) => { dlg.close(); resolve(v); };
+    $('#nmMake').onclick = () => { const t = $('#nmName').value.trim(); if (!t) { $('#nmName').focus(); return; } done({ title: t, zone: sel.value }); };
+    $('#nmCancel').onclick = () => done(null);
+    dlg.oncancel = () => resolve(null);
+    dlg.showModal();
+    $('#nmName').focus();
+  });
+}
+$('#btnNewMap').addEventListener('click', () => {
+  if (app.dirty && !confirm('This map has unsaved changes. They are copied into the new map, but this map itself stays unsaved and is closed. Go on?')) return;
+  newMap();
+});
+
+// --- File check ------------------------------------------------------------------------------------
+// The game lists its maps in public/assets/manifest.json and its buildings in public/data/
+// buildings.json, not by what is in the folders, so a map file copied in by hand, or one deleted,
+// would otherwise go unnoticed. On opening (and with Check files) this compares the two and offers
+// each fix, ticked, to apply or leave (Boss, 30 Oct 2026). Tiles need no list: the palette is
+// read from the folders.
+
+const checkDlg = $('#checkDlg');
+let checkItems = [];
+
+async function fileCheck(show) {
+  if (!lib.manifest) { if (show) status('The file check needs the game maps: open public (or public/assets) or load them from the server.', 'err'); return; }
+  const items = [];
+  const mapsDir = joinPath(lib.assets, 'maps');
+  // A map's id is its file name, and the game only takes lower-case letters, digits, dots, dashes
+  // and underscores: a file named otherwise (a space slipped in when renaming it) is never added,
+  // and one already listed is offered for taking off the list below (Boss, 31 Oct 2026).
+  const okId = (id) => /^[a-z0-9_.-]+$/.test(id);
+  const all = [...source.files.keys()].filter((p) => dirOf(p) === mapsDir && p.endsWith('.json')).sort();
+  for (const p of all.filter((f) => !okId(stem(f)))) {
+    const fix = stem(p).trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '');
+    items.push({ kind: 'warn', text: `"${baseName(p)}" can't be a game map: map file names are lower-case letters, digits, dots, dashes and underscores, with no spaces or capitals. Rename it ${fix || 'something else'}.json in public/assets/maps, then Check files again.` });
+  }
+  const files = all.filter((f) => okId(stem(f)));
+  const fileIds = new Set(files.map(stem));
+  const seen = new Set();
+  for (const m of lib.manifest.maps) {
+    if (seen.has(m.id)) items.push({ kind: 'remove', text: `${m.id} is in the map list twice: take out the second.`, apply: (c) => { const i = lib.manifest.maps.lastIndexOf(m); if (i >= 0) lib.manifest.maps.splice(i, 1); c.manifest = true; } });
+    seen.add(m.id);
+  }
+  for (const p of files) {
+    const id = stem(p);
+    let raw;
+    try { raw = JSON.parse(await source.text(p)); } catch (e) { items.push({ kind: 'warn', text: `${baseName(p)} can't be read as JSON (${e.message}), so it isn't added.` }); continue; }
+    if (!raw || !Array.isArray(raw.ground) || !raw.width || !raw.height) { items.push({ kind: 'warn', text: `${baseName(p)} isn't a game map (no ground layers or size), so it isn't added.` }); continue; }
+    const kind = raw.kind === 'interior' ? 'interior' : 'area';
+    const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title : id;
+    const fixId = raw.id !== id;
+    const writeId = async () => { raw.id = id; await writeFile(p, `${JSON.stringify(raw)}\n`); };
+    const entry = lib.manifest.maps.find((m) => m.id === id);
+    if (!entry) {
+      const clash = fixId && lib.manifest.maps.some((m) => m.id === raw.id);
+      // An exit to the world map needs a route in world.json listing where it can go, or the game
+      // won't start (content.ts): such a map is offered unticked, saying so (Boss, 31 Oct 2026).
+      const routes = known.world?.data.routes ?? [];
+      const unrouted = kind === 'area' && known.world ? (raw.objects ?? []).filter((o) => o.type === 'exit' && o.props?.to === 'world_map' && !routes.some((r) => r.map === id && r.exit === o.name)).map((o) => `"${o.name}"`) : [];
+      const it = {
+        kind: 'add',
+        off: unrouted.length > 0,
+        text: `New ${kind === 'interior' ? 'interior' : 'map'} ${baseName(p)} ("${title}")${unrouted.length ? ` (left unticked: its exit ${unrouted.join(', ')} goes to the world map and no route in world.json says where to, so the game won't start with it listed until one does)` : ''}: add it to the game's map list${kind === 'area' && known.world ? ', and to the world map in:' : '.'}${fixId ? ` The id inside it is ${raw.id}${clash ? ', which is already another map\'s,' : ''} so it's changed to ${id} to match the file name.` : ''}`,
+        zone: kind === 'area' && known.world ? zoneSelect(title, zoneOf(id)?.id) : null,
+        apply: async (c) => { if (fixId) await writeId(); lib.manifest.maps.push({ id, title, kind }); c.manifest = true; if (it.zone && putInZone(id, title, it.zone.value)) c.world = true; },
+      };
+      items.push(it);
+      raw.id = id;
+      const shared = kind === 'area' ? sharedInteriors(raw) : [];
+      if (shared.length) {
+        items.push({
+          kind: 'fix',
+          text: `${baseName(p)} looks like a copy: its buildings lead into ${shared.length} interior${shared.length > 1 ? 's' : ''} another map's buildings already lead into (${shared.slice(0, 3).join(', ')}${shared.length > 3 ? '…' : ''}), and the game won't start like that. Clear its buildings, doors, people and triggers, keeping the ground, props and spawns (as New map does)?`,
+          apply: async () => { clearCopy(raw); await writeFile(p, `${JSON.stringify(raw)}
+`); },
+        });
+      }
+      continue;
+    }
+    if (fixId) items.push({ kind: 'fix', text: `${baseName(p)} says its id is ${raw.id}: change it to ${id} to match the file name (the game finds it by that).`, apply: writeId });
+    if (entry.title !== title) items.push({ kind: 'fix', text: `${id} is "${title}" in its file but "${entry.title}" in the map list: use "${title}".`, apply: (c) => { entry.title = title; c.manifest = true; } });
+    if (entry.kind !== kind) items.push({ kind: 'fix', text: `${id} is an ${kind} map in its file but listed as ${entry.kind}: list it as ${kind}.`, apply: (c) => { entry.kind = kind; c.manifest = true; } });
+    if (kind === 'area' && known.world && !zoneOf(id)) {
+      const it = { kind: 'fix', text: `${title} (${id}) isn't on the world map: put it in`, zone: zoneSelect(title), apply: (c) => { if (putInZone(id, title, it.zone.value)) c.world = true; } };
+      items.push(it);
+    }
+  }
+  for (const m of lib.manifest.maps) {
+    if (fileIds.has(m.id)) continue;
+    const why = okId(m.id) ? `maps/${m.id}.json isn't in the folder` : `"${m.id}" isn't a name the game takes (a space or capital in it)`;
+    items.push({ kind: 'remove', text: `${m.title ?? m.id} (${m.id}) is in the map list but ${why}: take it off the list and the world map (the game won't start while it's there).`, apply: (c) => { lib.manifest.maps = lib.manifest.maps.filter((x) => x !== m); c.manifest = true; if (takeOutOfZones(m.id)) c.world = true; } });
+  }
+  if (lib.data) {
+    // Over http only the pictures made here are listed, so only those can be found missing.
+    const has = (sheet) => (source.http && !isMine(sheet)) || source.has(joinPath(lib.assets, sheet));
+    for (const b of lib.data.buildings) {
+      const gone = [...new Set(b.parts.map((pt) => pt.sheet).filter((s) => !has(s)))];
+      if (!gone.length) continue;
+      items.push({
+        kind: 'warn', off: !!b.draft,
+        text: `${b.name}'s picture ${gone.map(baseName).join(', ')} isn't in the folder.${b.draft ? '' : ' Mark it unfinished so it can\'t be placed until it has one? (Redraw it in the Buildings tab.)'}`,
+        apply: b.draft ? null : (c) => { b.draft = true; c.library = true; },
+      });
+    }
+    const used = new Set(lib.data.buildings.flatMap((b) => b.parts.map((pt) => pt.sheet)));
+    const dir = joinPath(lib.assets, 'custom/buildings');
+    for (const p of [...source.files.keys()].filter((f) => dirOf(f) === dir && f.endsWith('.png')).sort()) {
+      const sheet = p.slice(lib.assets ? lib.assets.length + 1 : 0);
+      if (used.has(sheet)) continue;
+      const name = stem(p).replace(/[-_]+/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
+      items.push({
+        kind: 'add',
+        text: `New building picture ${baseName(p)}: add "${name}" to the building library, unfinished, to set up its footprint and doors in the Buildings tab.`,
+        apply: async (c) => {
+          const e = imageAt(p);
+          await loaded(e);
+          const w = e.img.naturalWidth || TILE, h = e.img.naturalHeight || TILE;
+          let id = `bld.custom.${slug(stem(p)).replace(/-/g, '_')}`;
+          for (let n = 2; libDef(id); n++) id = `bld.custom.${slug(stem(p)).replace(/-/g, '_')}_${n}`;
+          const fw = Math.max(1, Math.round(w / TILE)), fh = Math.max(1, Math.round(h / TILE) - 1);
+          lib.data.buildings.push({ id, name, draft: true, parts: [{ sheet, crop: [0, 0, w, h], at: [0, 0] }], footprint: Array.from({ length: fh }, () => '#'.repeat(fw)), doors: [], returns: [] });
+          c.library = true;
+        },
+      });
+    }
+  }
+  checkItems = items;
+  if (!items.length) { if (show) status('File check: the map list matches the maps folder, and every building picture is in the library.', 'ok'); return; }
+  const box = $('#checkList');
+  box.innerHTML = '';
+  for (const it of items) {
+    const row = document.createElement('label');
+    row.className = `chk ${it.kind}`;
+    const c = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!it.apply && !it.off, disabled: !it.apply });
+    it.box = c;
+    const words = document.createElement('span');
+    words.append(it.text);
+    if (it.zone) { it.zone.style.display = 'block'; it.zone.style.marginTop = '4px'; words.append(it.zone); }
+    row.append(c, words);
+    box.appendChild(row);
+  }
+  $('#checkApply').disabled = !items.some((i) => i.apply);
+  checkDlg.showModal();
+}
+
+$('#checkApply').addEventListener('click', async () => {
+  const todo = checkItems.filter((i) => i.apply && i.box.checked);
+  if (!todo.length) { checkDlg.close(); return; }
+  if (app.dirty && !confirm('Applying reloads the maps, and this map has unsaved changes. Apply anyway and lose them?')) return;
+  checkDlg.close();
+  const c = {};
+  try {
+    for (const it of todo) await it.apply(c);
+    if (c.manifest) await writeFile(lib.manifestPath, `${JSON.stringify(lib.manifest, null, 1)}${lib.manifestNl ? '\n' : ''}`);
+    if (c.library) await writeFile(lib.path, libText(lib.data));
+    if (c.world) await saveWorld();
+  } catch (e) { console.error(e); status(`The file check couldn't save: ${e.message}`, 'err'); return; }
+  setDirty(false);
+  if (!source.canWrite) { status(`Downloaded ${[c.manifest && 'manifest.json', c.library && 'buildings.json', c.world && 'world.json'].filter(Boolean).join(' and ')}: copy them over the game's own, then reopen the editor.`, 'ok'); return; }
+  const was = app.doc?.path;
+  if (source.http) await source.scan();
+  await useSource(source, { check: false, open: was });
+  status(`File check: applied ${todo.length} change${todo.length > 1 ? 's' : ''}.${c.manifest ? ' New maps are in the map list.' : ''}`, 'ok');
+});
+$('#checkLater').addEventListener('click', () => checkDlg.close());
+$('#btnCheck').addEventListener('click', () => fileCheck(true));
+
 // ---------------------------------------------------------------------------------------------
 // Served over http (for example `npm run dev`, then /tools/map-editor.html): load the game maps
 // straight from the server. Saving downloads the file.
@@ -3934,7 +4265,7 @@ async function tryServer() {
       const b = document.createElement('button');
       b.textContent = `Load the ${manifest.maps.length} game maps from this server`;
       b.addEventListener('click', async () => {
-        const src = new HttpSource(base, manifest.maps.map((m) => `maps/${m.id}.json`).concat('manifest.json', ['buildings', 'story', 'npcs', 'tracks'].map((f) => `../data/${f}.json`)));
+        const src = new HttpSource(base, manifest.maps.map((m) => `maps/${m.id}.json`).concat('manifest.json', ['buildings', 'story', 'npcs', 'tracks', 'world'].map((f) => `../data/${f}.json`)));
         await src.scan();
         await useSource(src);
         status(src.canWrite ? 'Loaded the game. Save writes straight into it (maps, tiles and buildings).' : 'Loaded the game maps. This server is read only, so saving downloads the file.', 'ok');

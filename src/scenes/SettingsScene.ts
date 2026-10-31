@@ -100,6 +100,8 @@ export class SettingsScene extends Phaser.Scene {
         label(0, 'Tutorial prompts'); toggle(this, sliderX + 26, rowY(0), s.gameplay.tutorialPrompts, upd('gameplay', 'tutorialPrompts'));
         label(1, 'Context hints'); toggle(this, sliderX + 26, rowY(1), s.gameplay.contextHints, upd('gameplay', 'contextHints'));
         label(2, 'Repeated reminders'); toggle(this, sliderX + 26, rowY(2), s.gameplay.reminders, upd('gameplay', 'reminders'));
+        // TEST ONLY, REMOVE BEFORE RELEASE (Boss, 30 Oct 2026): test ride tracks on your own.
+        label(3, 'TEST: Ride alone (no AI)'); toggle(this, sliderX + 26, rowY(3), s.gameplay.testRideAlone, upd('gameplay', 'testRideAlone'));
         break;
       case 'Controls': {
         const c = s.controls;

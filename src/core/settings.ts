@@ -11,7 +11,8 @@ export interface Settings {
   /** zoomControl: the on-screen zoom control, a pop-out slider or + and − buttons. */
   display: { zoom: number; fullscreen: boolean; zoomControl: ZoomControl };
   accessibility: { textScale: number; reducedEffects: boolean; highContrast: boolean };
-  gameplay: { tutorialPrompts: boolean; contextHints: boolean; reminders: boolean };
+  /** testRideAlone: TEST ONLY, REMOVE BEFORE RELEASE (Boss, 30 Oct 2026): practice and race days with no AI riders. */
+  gameplay: { tutorialPrompts: boolean; contextHints: boolean; reminders: boolean; testRideAlone: boolean };
   controls: { up: string; down: string; left: string; right: string; interact: string; menu: string };
 }
 
@@ -19,7 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   audio: { master: 80, music: 70, engines: 80, crowd: 70, muted: false },
   display: { zoom: 100, fullscreen: false, zoomControl: 'slider' },
   accessibility: { textScale: 130, reducedEffects: false, highContrast: false },
-  gameplay: { tutorialPrompts: true, contextHints: true, reminders: true },
+  gameplay: { tutorialPrompts: true, contextHints: true, reminders: true, testRideAlone: false },
   controls: { up: 'W', down: 'S', left: 'A', right: 'D', interact: 'E', menu: 'ESC' },
 };
 

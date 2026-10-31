@@ -113,7 +113,128 @@ function clutter(b: Build, x: number, z: number, c: number): void {
   wheel.position.y = 0.33 * U;
 }
 
+/**
+ * The two officials at an enduro sprint's start (Boss, 29 Oct 2026), standing side by side facing
+ * +z: the timekeeper with a stopwatch held up in the right hand, and the scorer with a clipboard
+ * held in front, writing each rider's time off. Built standing at (x, z), turned by ry.
+ */
+export function sprintOfficials(b: Build, x: number, z: number, ry: number, i: number): void {
+  b.turned(x, z, ry, () => {
+    // The timekeeper: the right arm raised to the face with the watch, the left by their side.
+    const n = b.parts.length;
+    b.person(x - 0.45, z, 0, i, { shirt: HIVIS, trousers: BLACK, arms: 'down' });
+    // Swap the right arm for one bent up to the face, the stopwatch in the hand.
+    b.parts.splice(n + b.parts.slice(n).length - 1, 1);
+    b.box(x - 0.15, 1.25, z + 0.14, 0.1, 0.1, 0.42, 0xe0b090, 0, -0.9);
+    b.cyl(x - 0.15, 1.52, z + 0.32, 0.07, 0.03, BLACK, 12).rotation.x = Math.PI / 2;
+    b.cyl(x - 0.15, 1.52, z + 0.34, 0.05, 0.01, WHITE, 12).rotation.x = Math.PI / 2;
+    // A cap.
+    b.box(x - 0.45, 1.73, z + 0.04, 0.26, 0.08, 0.3, BLACK);
+    // The scorer: both arms forward holding the clipboard, a pen in the right hand.
+    b.person(x + 0.45, z, 0, i + 1, { shirt: HIVIS, trousers: 0x2a3a5a, arms: 'forward' });
+    b.box(x + 0.45, 1.18, z + 0.52, 0.34, 0.03, 0.44, 0x8a6a40, 0, -0.5);
+    b.box(x + 0.45, 1.2, z + 0.52, 0.28, 0.03, 0.36, WHITE, 0, -0.5);
+    b.box(x + 0.6, 1.26, z + 0.5, 0.02, 0.02, 0.14, BLACK);
+  });
+}
+
+/**
+ * The starter's box on a No-Turn Takedown's start platform (Boss, 30 Oct 2026), between the two
+ * pairs of gates: a waist-high booth `w` metres across and deep, its open back at -z, with the
+ * starter standing in it facing +z (down the run) and the gate's push-button lever by the front
+ * wall. Built in metres at (0, 0, 0), on the platform's deck.
+ */
+export function starterBox(w: number, i: number): Build['parts'] {
+  const b = new Build();
+  const h = 1.05;
+  const t = 0.06;
+  const RED = 0xc8302a;
+  b.box(0, 0, 0, w, 0.06, w, 0x5a5a60);
+  b.box(0, 0, w / 2 - t / 2, w, h, t, RED);
+  for (const sx of [-1, 1]) b.box(sx * (w / 2 - t / 2), 0, 0, t, h, w, RED);
+  b.box(0, h, w / 2 - t / 2, w + 0.06, 0.06, t + 0.08, WHITE);
+  for (const sx of [-1, 1]) b.box(sx * (w / 2 - t / 2), h, 0, t + 0.08, 0.06, w, WHITE);
+  // A canopy on two poles at the back corners.
+  for (const sx of [-1, 1]) b.pole(sx * (w / 2 - 0.05), 0, -w / 2 + 0.05, 2.3, STEEL, 0.05);
+  b.box(0, 2.3, 0, w + 0.2, 0.06, w + 0.2, RED);
+  // The gate lever on its post by the front wall, and the starter behind it.
+  b.pole(w * 0.25, 0, w / 2 - 0.2, 0.95, STEEL, 0.06);
+  b.box(w * 0.25, 0.95, w / 2 - 0.2, 0.12, 0.08, 0.12, 0xf0c020);
+  b.person(-0.05, -0.05, 0, i, { shirt: HIVIS, trousers: BLACK, arms: 'forward' });
+  return b.parts;
+}
+
 const builders: Record<string, (c: Ctx) => void> = {
+  sprint_start({ b, col, L, i, text, labels }) {
+    // An enduro sprint's start line: the sponsor arch over the line, the timing beam across the
+    // ground under it, and the timekeeper and the scorer at the right-hand post with the clock.
+    const dark = shade(col, 0.8);
+    const h = 4.4;
+    for (const s of [-1, 1]) {
+      b.cyl(s * (L / 2 - 0.55), 0, 0, 0.55, h, col, 14);
+      b.cyl(s * (L / 2 - 0.55), 0, 0, 0.6, 0.45, dark, 14);
+    }
+    const beam = b.cyl(0, h, 0, 0.55, L, col, 14);
+    beam.rotation.z = Math.PI / 2;
+    beam.position.y = h * U;
+    labels.push({ x: 0, y: h - 0.45, z: 0, l: L - 2.2, h: 0.9, w: 1.12, text, bg: col, both: true });
+    // The timing beam: a cell on a post each side just inside the arch, and the line across.
+    for (const s of [-1, 1]) {
+      b.pole(s * (L / 2 - 1.4), 0, 0.7, 1.0, 0xf0a020, 0.07);
+      b.box(s * (L / 2 - 1.4), 1.0, 0.7, 0.22, 0.18, 0.22, s > 0 ? 0xd02020 : 0x3a3a40);
+    }
+    b.box(0, 0, 0.7, L - 2.8, 0.03, 0.1, 0xf0f0f0);
+    // The clock on its stand beside the right post, facing the riders, and the officials by it.
+    b.pole(L / 2 + 0.9, 0, -0.9, 1.5, STEEL, 0.06);
+    b.box(L / 2 + 0.9, 1.5, -0.9, 0.9, 0.42, 0.08, BLACK);
+    labels.push({ x: L / 2 + 0.9, y: 1.53, z: -0.95, l: 0.84, h: 0.36, w: 0.02, ry: Math.PI, text: '0:10', bg: BLACK, fg: '#ffd040' });
+    sprintOfficials(b, L / 2 + 1.25, 0.9, -Math.PI / 2, i);
+  },
+  boulder({ b, col, L, D, variant, i }) {
+    // Rough grey rocks: one big one, two, or a heap of smaller ones, each a lumpy flattened ball.
+    const rock = (x: number, z: number, r: number, k: number) => {
+      const m = b.cyl(x, 0, z, r, r * 1.3, shade(col, 0.85 + 0.3 * hash(i * 7 + k)), 7, r * 0.55);
+      m.rotation.y = hash(i * 3 + k) * Math.PI;
+    };
+    if (variant === 'one') rock(0, 0, Math.min(L, D) * 0.45, 0);
+    else if (variant === 'pair') {
+      rock(-L * 0.2, 0, Math.min(L * 0.3, D * 0.45), 0);
+      rock(L * 0.25, D * 0.1, Math.min(L * 0.22, D * 0.35), 1);
+    } else for (let k = 0; k < 6; k++) rock((hash(i + k * 5) - 0.5) * L * 0.75, (hash(i * 2 + k * 9) - 0.5) * D * 0.6, 0.18 + 0.22 * hash(i + k), k);
+  },
+  log_pile({ b, col, L, D, variant, i }) {
+    const BARK = shade(col, 0.85);
+    const END = 0xc8a878;
+    const log = (x: number, y: number, z: number, r: number, len: number, ry = 0) => {
+      const m = b.cyl(x, y, z, r, len, BARK, 10);
+      m.rotation.set(0, ry, Math.PI / 2);
+      m.position.y = (y + r) * U;
+      // The cut ends, lighter.
+      for (const s of [-1, 1]) {
+        const e = b.cyl(x + s * Math.cos(ry) * (len / 2 + 0.005), y, z - s * Math.sin(ry) * (len / 2 + 0.005), r * 0.92, 0.02, END, 10);
+        e.rotation.set(0, ry, Math.PI / 2);
+        e.position.y = (y + r) * U;
+      }
+    };
+    if (variant === 'fallen') {
+      log(0, 0, 0, Math.min(0.35, D * 0.3), L * 0.95, 0.08);
+      // A broken-off branch.
+      b.box(L * 0.2, 0.3, 0.25, 0.8, 0.08, 0.08, BARK, 0.6);
+    } else if (variant === 'stumps') {
+      for (let k = 0; k < 3; k++) {
+        const x = (k - 1) * L * 0.3;
+        const r = 0.22 + 0.12 * hash(i + k);
+        b.cyl(x, 0, (hash(i * 3 + k) - 0.5) * D * 0.5, r, 0.35 + 0.25 * hash(i * 5 + k), BARK, 9);
+        b.cyl(x, 0.6, (hash(i * 3 + k) - 0.5) * D * 0.5, r * 0.9, 0.02, END, 9).position.y = (0.35 + 0.25 * hash(i * 5 + k) + 0.01) * U;
+      }
+    } else {
+      const r = Math.min(0.2, D / 7);
+      const rows = [4, 3, 2];
+      rows.forEach((n, row) => {
+        for (let k = 0; k < n; k++) log(0, row * r * 1.7, (k - (n - 1) / 2) * r * 2.05, r, L * 0.9);
+      });
+    }
+  },
   tv_camera_op({ b, col, variant, i }) {
     const pose = variant === 'kneeling' ? 'kneel' : 'stand';
     b.person(0, -0.1, 0, i, { pose, arms: 'forward', shirt: col, held: [0.5, 0.26, 0.28, CAMERA] });

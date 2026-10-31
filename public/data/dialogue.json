@@ -119,13 +119,13 @@
     "local_racer.after": { "lines": [
       { "speaker": "npc", "text": "Farmland MX, west road. I'll see you on the gate." }
     ] },
-    "farmland_owner.intro": { "lines": [
-      { "speaker": "npc", "text": "Hello there! I'm Joseph Halden. I own Farmland MX, and I run the race office too." },
-      { "speaker": "npc", "text": "This track used to be my family's farm. Every bump out there has a story." },
-      { "speaker": "npc", "text": "First time racing here, {rider}? Your first race day is free. Sign on when you're ready, and have fun out there." }
+    "track_owner.intro": { "lines": [
+      { "speaker": "npc", "text": "Hello there! I'm Joseph Halden. My family runs every track in the land: Farmland MX, Riverside Arena, Longmoor Enduro, the lot." },
+      { "speaker": "npc", "text": "It started with Farmland. That track used to be our family's farm, and every bump out there has a story. The rest came along as the sport grew." },
+      { "speaker": "npc", "text": "You'll find me in the race office at every one of them. First time racing with us, {rider}? Your first race day is free. Sign on when you're ready, and have fun out there." }
     ] },
     "track_official.hello": { "lines": [
-      { "speaker": "npc", "text": "Race office. Sign on here for race days and practice." }
+      { "speaker": "npc", "text": "Good to see you, {rider}. Sign on here for race days and practice, same as at all our tracks." }
     ] },
     "local_champion.hello": { "lines": [
       { "speaker": "npc", "text": "New face. Signing on for the 50s? I'm the current Area Champion, and I pretty much always win out there." },

@@ -3,6 +3,8 @@ import type { TrackDef } from './race';
 import { OFFICIAL_ITEM, officialPlan, placedOfficial } from './startOfficial';
 import { cheerProblems } from './cheer';
 import { sceneryIssues } from './trackClearance';
+import { NO_TURN_KIND, SPRINT_KIND } from './trackGeom';
+export { gridOf } from './trackGeom';
 import type { ContentError, Schema } from './validate';
 
 // The parts a track is built from beyond its sections: track kinds, surface patches, ground and
@@ -47,6 +49,8 @@ export interface SceneryDef {
   variants?: [string, string][];
   setups?: [string, string][];
   colours?: string[];
+  /** A new item from a model in the models folder (modModels.ts), added when the game loads; never in trackParts.json. */
+  model?: boolean;
 }
 
 export interface TrackPartsData {
@@ -92,8 +96,7 @@ export const TRACK_PARTS_SCHEMA: Schema = {
 };
 
 export const DEFAULT_TRACK_WIDTH = 3.4;
-export const GRID_W = 100;
-export const GRID_H = 60;
+export { GRID_H, GRID_W } from './trackGeom';
 
 export function trackKind(parts: TrackPartsData, track: TrackDef): TrackKind {
   return parts.kinds.find((k) => k.id === track.kind) ?? parts.kinds.find((k) => k.id === 'outdoor') ?? parts.kinds[0];
@@ -140,11 +143,15 @@ export function checkTrackParts(parts: TrackPartsData, tracks: TrackDef[], artEx
       const { mpu, along } = lapProfile(t);
       for (const p of elevationIssues(t, mpu, along)) if (p.level === 'error') err(F.tracks, at('elevation'), p.message);
     }
-    if (t.scenery?.some((s) => s.type === OFFICIAL_ITEM)) {
+    if (t.kind === SPRINT_KIND && t.scenery?.some((s) => s.type === OFFICIAL_ITEM)) {
+      err(F.tracks, at(`scenery[${t.scenery.findIndex((s) => s.type === OFFICIAL_ITEM)}]`), 'an Enduro Sprint has no start board official: riders leave one at a time from the start line');
+    } else if (t.kind === NO_TURN_KIND && t.scenery?.some((s) => s.type === OFFICIAL_ITEM)) {
+      err(F.tracks, at(`scenery[${t.scenery.findIndex((s) => s.type === OFFICIAL_ITEM)}]`), "a No-Turn Takedown has no start board official: the starter stands in the starter's box on the start platform");
+    } else if (t.scenery?.some((s) => s.type === OFFICIAL_ITEM)) {
       // Placed by the track: every problem with where they stand and walk.
       const j = t.scenery.findIndex((s) => s.type === OFFICIAL_ITEM);
       for (const m of placedOfficial(t, parts).problems) err(F.tracks, at(`scenery[${j}]`), m);
-    } else if (!t.practiceOnly && t.start) {
+    } else if (!t.practiceOnly && t.start && t.kind !== NO_TURN_KIND) {
       try {
         officialPlan(t, parts);
       } catch {

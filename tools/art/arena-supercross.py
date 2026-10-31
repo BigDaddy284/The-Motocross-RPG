@@ -1,13 +1,19 @@
-"""Draws Riverside Arena: the indoor supercross arena that fills the top of the Riverside venue map.
+"""Draws the Supercross Arena: the indoor arena that fills the top of the Supercross venue map, the
+default venue for every supercross event (Boss, 30 Oct 2026).
 
 A big corrugated-steel hall seen top-down three-quarter like the other buildings: a curved roof
 with skylights and vents, a blue clad front with high windows and supercross posters, the
-"RIVERSIDE ARENA" sign and a glass entrance with double doors under a canopy. Drawn at half size
+"SUPERCROSS ARENA" sign and a glass entrance with double doors under a canopy. Drawn at half size
 and doubled, for the style guide's 2 px pixel clusters, with every colour snapped to the
 reference palette (art/palette/palette-ref-v1.hex). 28 x 12 tiles; the double doors are tiles 12
 and 13 of the bottom row, where the map's venue trigger is.
 
-    python3 tools/art/arena-riverside.py <palette.hex> <out.png> [preview.png]
+    python3 tools/art/arena-supercross.py <palette.hex> <out.png> [preview.png] [--sign=TEXT] [--poster=WORD]
+
+--sign and --poster change the wording, for the EnduroCross arena drawn from this one (Boss, 30 Oct
+2026: "the same as Supercross but with updated signage"):
+
+    python3 tools/art/arena-supercross.py <palette.hex> endurocross-arena.png --sign="ENDUROCROSS ARENA" --poster=ENDUROCROSS
 """
 import sys
 from pathlib import Path
@@ -18,6 +24,8 @@ TILE = 32  # a 64 px tile at half size
 W, H = 28 * TILE, 12 * TILE
 DOOR_X = 12 * TILE  # the double doors: tiles 12 and 13
 ROOF_BOTTOM = 7 * TILE + 16  # where the roof meets the front wall
+SIGN = 'SUPERCROSS ARENA'
+POSTER = 'SUPERCROSS'
 
 FONT = {
     'A': ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
@@ -145,7 +153,7 @@ def wall(cv):
 
 
 def poster(cv, x, y, word):
-    w, h = 64, 46
+    w, h = max(64, text_width(word, 1) + 6), 46
     cv.rect(x, y, x + w, y + h, (238, 234, 220))
     cv.rect(x + 2, y + 2, x + w - 2, y + 14, (30, 30, 36))
     cv.text(word, x + (w - text_width(word, 1)) // 2, y + 5, (250, 250, 242))
@@ -203,7 +211,7 @@ def entrance(cv):
     cv.rect(dx0 - 6, H - 2, dx1 + 6, H, (110, 110, 116))
     cv.frame(dx0 - 2, dy0 - 2, dx1 + 2, H - 6, OUTLINE)
     # The sign over the entrance, as the other buildings' signs: dark board, white letters, red rule.
-    name = 'RIVERSIDE ARENA'
+    name = SIGN
     tw = text_width(name, 2)
     sx0 = DOOR_X + TILE - tw // 2 - 14
     sx1 = DOOR_X + TILE + tw // 2 + 14
@@ -235,8 +243,8 @@ def draw(pal):
     cv = Canvas(pal)
     roof(cv)
     wall(cv)
-    for x, word in ((40, 'SUPERCROSS'), (184, 'RIVERSIDE'), (640, 'SUPERCROSS'), (784, 'RIVERSIDE')):
-        poster(cv, x, H - 66, word)
+    for x in (40, 184, 640, 784):
+        poster(cv, x, H - 66, POSTER)
     entrance(cv)
     flags(cv)
     cv.frame(0, 0, W, H, OUTLINE)
@@ -245,11 +253,18 @@ def draw(pal):
 
 
 def main():
-    pal = load_palette(sys.argv[1])
+    global SIGN, POSTER
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    for a in sys.argv[1:]:
+        if a.startswith('--sign='):
+            SIGN = a[len('--sign='):]
+        elif a.startswith('--poster='):
+            POSTER = a[len('--poster='):]
+    pal = load_palette(args[0])
     img = draw(pal).resize((W * 2, H * 2), Image.NEAREST)
-    img.save(sys.argv[2])
-    if len(sys.argv) > 3:
-        img.resize((W, H), Image.NEAREST).save(sys.argv[3])
+    img.save(args[1])
+    if len(args) > 2:
+        img.resize((W, H), Image.NEAREST).save(args[2])
 
 
 if __name__ == '__main__':

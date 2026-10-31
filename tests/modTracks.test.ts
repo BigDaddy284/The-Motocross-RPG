@@ -117,6 +117,6 @@ describe('racing a mod track', () => {
     const home = maps.get('area1-home-town')!;
     const road = home.objects.find((o) => o.type === 'exit' && o.name === 'To the venue route')!;
     const to = routeArrival(home, road, content.world, maps, MOD_PLACE);
-    expect(typeof to === 'string' ? to : to.map).toBe('area1-venue-farmland');
+    expect(typeof to === 'string' ? to : to.map).toBe('venue-motocross');
   });
 });

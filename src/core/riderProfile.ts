@@ -38,6 +38,10 @@ export interface RiderProfile {
   lane: number;
   /** A per-rider number for small differences that should stay the same all race. */
   seed: number;
+  /** The player's own rider (never the field's showman for tricks, tricks.ts). */
+  player?: boolean;
+  /** The player only, once tricks are taught (Entrant.riderLevel): Rider Ability level, for which tricks they throw and how often (playerTricks, tricks.ts). */
+  riderLevel?: number;
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -74,5 +78,7 @@ export function riderProfile(e: Entrant, stats: Record<string, number>, ceiling:
     agility: clamp01(0.3 + 0.35 * st('handling') + 0.35 * sk('balance')),
     lane: (hash(`${e.id}:lane`) - 0.5) * 1.2,
     seed,
+    player: e.player,
+    ...(e.player && e.riderLevel !== undefined ? { riderLevel: e.riderLevel } : {}),
   };
 }

@@ -4,7 +4,9 @@
   "kinds": [
     {"id": "stadium", "name": "Stadium (supercross)", "view": "screen", "desc": "A short track in an arena that fits on one screen."},
     {"id": "outdoor", "name": "Outdoor motocross", "view": "follow", "desc": "A natural-terrain track; the view follows the riders when it is too long for one screen."},
-    {"id": "endurance", "name": "Endurance", "view": "follow", "desc": "A long loop for long races; the view follows the riders, with a map of the whole track."}
+    {"id": "endurance", "name": "Endurance", "view": "follow", "desc": "A long loop for long races; the view follows the riders, with a map of the whole track."},
+    {"id": "enduro_sprint", "name": "Enduro Sprint", "view": "follow", "desc": "A timed test ridden one rider at a time, a few seconds apart, lowest total time winning. The first section is the return lane: a single-file lane from the finish line back to the start line, a quarter of the track's width, ridden at half speed and never timed."},
+    { "id": "no_turn", "name": "No-Turn Takedown", "view": "follow", "desc": "A straight drag strip on a long, slim 200 × 30 grid: no bends anywhere. Four riders drop off a raised start platform and race one run to the finish line, in knockout heats after a timed seeding run, with a best-of-three final. The first section is the run-off past the finish line, where riders pull up." }
   ],
   "lines": ["inside", "middle", "outside"],
   "surfaces": [
@@ -156,6 +158,7 @@
     {"id": "toilets", "name": "Portable toilets", "w": 4.0, "h": 1.1, "color": "#2a6ac0", "colours": ["#2a6ac0", "#2a8a40", "#8a8e94"], "variants": [["one", "One"], ["two", "Two"], ["four", "Four"]]},
     {"id": "feather_flags", "name": "Feather flags", "w": 2.7, "h": 0.8, "color": "#c82828", "text": "SPONSOR", "colours": ["#c82828", "#2a4a90", "#e8c020", "#2a8a40", "#202428", "#e07020"], "variants": [["one", "One flag"], ["three", "Three flags"]]},
     {"id": "inflatable", "name": "Sponsor inflatable", "w": 6.5, "h": 1.2, "color": "#c82828", "text": "SPONSOR", "overTrack": true, "colours": ["#c82828", "#2a4a90", "#e8c020", "#2a8a40", "#202428", "#e07020"], "variants": [["arch", "Arch"], ["column", "Column"]]},
+    {"id": "sprint_start", "name": "Sprint start", "w": 6.5, "h": 1.6, "color": "#2a4a90", "text": "ENDURO SPRINT", "overTrack": true, "colours": ["#2a4a90", "#c82828", "#e8c020", "#2a8a40", "#202428", "#e07020"]},
     {"id": "cones", "name": "Cones", "w": 5.0, "h": 0.5, "color": "#e8701a", "colours": ["#e8701a", "#e8c020", "#f0f0f0"]},
     {"id": "camp_chairs", "name": "Fans in camping chairs", "w": 2.6, "h": 1.2, "color": "#2a8a40", "colours": ["#2a8a40", "#c03030", "#2a4a90", "#202428", "#e8c020"], "variants": [["one", "One fan"], ["two", "Two fans"], ["three", "Three fans"]]},
     {"id": "fan_photo", "name": "Fan taking pictures", "w": 0.7, "h": 0.7, "color": "#e04040", "colours": ["#e04040", "#4080e0", "#f0c030", "#40b060", "#f0f0f0", "#9060c0"], "variants": [["phone", "Phone held up"], ["camera", "Camera"]]},
@@ -181,6 +184,8 @@
     {"id": "light_tower", "name": "Floodlight", "w": 2, "h": 2, "color": "#d0d0d0"},
     {"id": "finish_arch", "name": "Finish arch", "w": 14, "h": 1.5, "color": "#14141e", "text": "FINISH", "overTrack": true},
     {"id": "tree", "name": "Tree", "w": 4, "h": 4, "art": "town-props/tree", "color": "#2f6a2a"},
+    {"id": "boulder", "name": "Boulders", "w": 2, "h": 1.6, "color": "#8a8478", "variants": [["one", "One big rock"], ["pair", "Two rocks"], ["heap", "A heap of rocks"]]},
+    {"id": "log_pile", "name": "Log pile", "w": 3.2, "h": 1.4, "color": "#7a5230", "variants": [["pile", "Stacked logs"], ["fallen", "A fallen log"], ["stumps", "Tree stumps"]]},
     {"id": "bush", "name": "Bush", "w": 2, "h": 2, "art": "town-props/bush", "color": "#3f7a32"},
     {"id": "hedge", "name": "Hedge", "w": 2, "h": 2, "art": "town-props/hedge-mid", "color": "#3a6e2e"},
     {"id": "fence", "name": "Rail fence", "w": 2, "h": 2, "art": "venue-frontage/fence-rail", "color": "#8a6a44"},

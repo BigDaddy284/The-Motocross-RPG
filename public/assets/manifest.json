@@ -13,18 +13,18 @@
    "kind": "area"
   },
   {
-   "id": "area1-venue-farmland",
-   "title": "Farmland MX",
+   "id": "venue-motocross",
+   "title": "Motocross Venue",
    "kind": "area"
   },
   {
-   "id": "area1-venue-longmoor",
-   "title": "Longmoor Enduro",
+   "id": "venue-enduro",
+   "title": "Enduro Venue",
    "kind": "area"
   },
   {
-   "id": "area1-venue-riverside",
-   "title": "Riverside Arena",
+   "id": "venue-supercross",
+   "title": "Supercross Arena",
    "kind": "area"
   },
   {

@@ -5,6 +5,7 @@ import { MenuScene } from './scenes/MenuScene';
 import { NewCareerScene } from './scenes/NewCareerScene';
 import { RaceScene } from './scenes/RaceScene';
 import { SettingsScene } from './scenes/SettingsScene';
+import { ModelsScene } from './scenes/ModelsScene';
 import { TrackEditScene } from './scenes/TrackEditScene';
 import { WorldScene } from './scenes/WorldScene';
 import { DPR } from './ui/view';
@@ -18,7 +19,7 @@ const game = new Phaser.Game({
   // Drawn at the screen's real resolution and shown at CSS size (see ui/view.ts); fitScreen keeps it full-window.
   scale: { mode: Phaser.Scale.NONE, width: window.innerWidth * DPR, height: window.innerHeight * DPR, zoom: 1 / DPR },
   input: { activePointers: 2 },
-  scene: [BootScene, MenuScene, NewCareerScene, SettingsScene, WorldScene, HudScene, RaceScene, TrackEditScene],
+  scene: [BootScene, MenuScene, NewCareerScene, SettingsScene, WorldScene, HudScene, RaceScene, TrackEditScene, ModelsScene],
 });
 
 /**

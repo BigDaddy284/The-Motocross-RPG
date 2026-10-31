@@ -177,6 +177,7 @@ body.final .final-hide { display: none !important; }
   <button id="btnUndo" disabled title="Ctrl+Z">↶ Undo</button>
   <button id="btnRedo" disabled title="Ctrl+Y / Ctrl+Shift+Z">↷ Redo</button>
   <span class="grow"></span>
+  <button id="btnModels" title="Export the race view's objects for Blender, and see your own models">Models…</button>
   <button id="btnHelp">Help</button>
 </header>
 
@@ -280,6 +281,11 @@ body.final .final-hide { display: none !important; }
         <button id="btnFinishPiece" title="Place the finish line on the closed route: a chequered bar follows the pointer and snaps onto the route where every lap starts and ends. The sections are measured from it. It is never placed for you."><canvas width="44" height="44"></canvas><span>Finish line</span></button>
         <button id="btnFinishRemove" title="Take the finish line off this track: the route stays as it is, but the track is a draft until a finish line is placed again (Undo puts it back)"><canvas width="44" height="44"></canvas><span>Remove finish line</span></button>
       </div>
+      <div class="row" id="noTurnRow" hidden>
+        <button id="btnRunLonger" title="Lengthen the run by a straight piece (10 grid units): the finish line and the run-off move on, straight ahead">+ Straight</button>
+        <button id="btnRunShorter" title="Shorten the run by a straight piece (10 grid units)">− Straight</button>
+      </div>
+      <div class="row"><button id="btnMoveTrack" title="Pick the whole track up as one piece and drop it somewhere else on the grid: the route, start, features, scenery, ground paint and heights all move together">Move whole track</button></div>
       <div class="row" id="readyRow"><button id="btnReady" title="Run the game's checks and, if it passes, let the game use this track">Ready to race</button></div>
     </div>
     <div class="box" id="featBox">
@@ -323,7 +329,7 @@ body.final .final-hide { display: none !important; }
   </div>
 
   <div class="pane" id="pane-scenery">
-    <div class="hint">Pick an item: it follows the pointer, see-through, where a click would place it; <kbd>Q</kbd> <kbd>E</kbd> turn it first. Click an item to select it, drag to move it (arrow keys nudge it), <kbd>Q</kbd> <kbd>E</kbd> turn it 15°, with <kbd>Shift</kbd> 5°, with <kbd>Alt</kbd> 1° (or type any angle in Turn; left empty, a marshal, flag man, pit crew, fan or TV crew faces the track on its own), <kbd>Del</kbd> removes it. <kbd>Shift</kbd>-click adds items to the selection and <kbd>Shift</kbd>-drag on open ground boxes them (<kbd>Ctrl+A</kbd> all); a selection drags, nudges, turns, copies and deletes together. <kbd>Ctrl+C</kbd> copies, <kbd>Ctrl+X</kbd> cuts, <kbd>Ctrl+V</kbd> pastes at the pointer, <kbd>Ctrl+D</kbd> duplicates. <b>Snap object</b> joins it onto a nearby item, end to end or side by side; <kbd>Alt</kbd> drops the snapping. Snapped, <kbd>Q</kbd> <kbd>E</kbd> swing it round the join, so a fence can turn off another and stay joined. The white arrow shows which way it faces.</div>
+    <div class="hint">Pick an item: it follows the pointer, see-through, where a click would place it; <kbd>Q</kbd> <kbd>E</kbd> turn it first. Click an item to select it, drag to move it (arrow keys nudge it), <kbd>Q</kbd> <kbd>E</kbd> turn it 15°, with <kbd>Shift</kbd> 5°, with <kbd>Ctrl</kbd> 1° (or type any angle in Turn; left empty, a marshal, flag man, pit crew, fan or TV crew faces the track on its own), <kbd>Del</kbd> removes it. <kbd>Shift</kbd>-click adds items to the selection and <kbd>Shift</kbd>-drag on open ground boxes them (<kbd>Ctrl+A</kbd> all); a selection drags, nudges, turns, copies and deletes together. <kbd>Ctrl+C</kbd> copies, <kbd>Ctrl+X</kbd> cuts, <kbd>Ctrl+V</kbd> pastes at the pointer, <kbd>Ctrl+D</kbd> duplicates. <b>Snap object</b> joins it onto a nearby item, end to end or side by side; <kbd>Alt</kbd> drops the snapping. Snapped, <kbd>Q</kbd> <kbd>E</kbd> swing it round the join, so a fence can turn off another and stay joined. The white arrow shows which way it faces.</div>
     <div class="pal" id="sceneryPal"></div>
     <div class="box" id="sceneryDetail"></div>
   </div>
@@ -356,6 +362,9 @@ body.final .final-hide { display: none !important; }
     <li><b>Start straight:</b> every track starts from a gate on its own start straight that joins the route, as on a real track. Its points are the blue squares: the first is the gate (the black bar, with the yellow line-up behind it), the white one is where it joins the route and stays on the route when dragged. To add one, pick <b>Start straight</b> under <b>Start and finish</b> (or <b>+ Start straight</b> above the view): it follows the pointer, its end (the ring) snapping onto the route where the pointer is near it, green where it can go and red with the reason where it can't; <kbd>Q</kbd> <kbd>E</kbd> turn it, <kbd>F</kbd> brings it in from the other side, <kbd>,</kbd> <kbd>.</kbd> make it shorter or longer, a click or <kbd>Enter</kbd> places it and <kbd>Esc</kbd> cancels. On an empty track it can go first, anywhere, and be joined on later by dragging its white end onto the route (anywhere on it, just before or after the finish line included). It turns red when it is off the route. <b>Move start straight</b> places it again, and <b>Remove start straight</b> takes it off. Riders ride it once, then the lap from the join round to the finish line, which ends lap 1. <b>The first corner</b> is the start straight's end: the stretch between its last two blue points, drawn blue and labelled, which the race rides with the first corner's own rules (difficulty, skills, lap 1's first-corner incident). It is not a section: there is none to place or pick, and a First corner section on an older track rides as a flat corner. Select a blue point for <b>+ Point</b> and <b>− Point</b>. The checks ask for it to be at least 12 grid units long, clear of the route until it joins, meeting the route at 75° or less.</li>
     <li><b>Finish line:</b> its own part of the track, placed by you and never for you: closing the lap or joining the start straight makes no finish line. A <b>tabletop</b> or <b>double</b> can be the finish line instead: tick <b>Finish line</b> in its panel and the lap starts and ends at its foot, with the finish arch built over it on the take-off lip of its front hump, its posts on the banks beside the track and its banner high enough that a rider still in the air goes under it; moving the finish line elsewhere makes it a plain jump again, and a scenery finish arch is not needed (ticking the box takes one away). Pick <b>Finish line</b> under <b>Start and finish</b> (or <b>+ Finish line</b> above the view) once the lap is closed and a chequered bar follows the pointer, snapping across the lap; a click or <kbd>Enter</kbd> places it. It becomes the lap's first point (a point is added there if there was none), and the sections are split and turned round to start there, so the lap is laid out exactly as before. <b>Finish here</b> puts it on the selected point, dragging point 0 moves it along the lap, and <b>Remove finish line</b> takes it off (the track is then unfinished until one is placed again). A track without one is a valid draft; it is listed under the checks as still needed to race. The <b>finish arch</b> (Scenery) always spans the track's width, its posts just outside the lips, and belongs on the finish line: placing the line moves it there, square to the track, its panel has <b>Put on the finish line</b>, and the checks say when it is off.</li>
     <li><b>Kind</b> sets how the race screen shows the track: a stadium track fits on one screen; outdoor and endurance tracks use a camera that follows the riders, with a map of the whole lap. <b>Width</b> is the track width on the race screen.</li>
+    <li><b>No-Turn Takedown</b> (a Kind) is a straight drag strip on a long, slim 200 × 30 grid: four riders at a time drop off a raised start platform and race one run to the finish line, in knockout heats after a timed seeding run, with a best-of-three final. There are no bends anywhere, so the route is never drawn by hand: pick <b>Start platform</b> under Start and finish and click where the start line goes (the foot of the drop-in), <kbd>Q</kbd> / <kbd>E</kbd> turn it 5°, <kbd>F</kbd> turns it round, <kbd>,</kbd> <kbd>.</kbd> shorten or lengthen the run. <b>+ Straight</b> and <b>− Straight</b> lengthen or shorten the run by a straight piece (10 grid units), the finish line moving on straight ahead. Features (jumps, whoops, rhythm and the rest) go on the run only. A tabletop or double at the end of the run can be the finish line (<b>Finish line</b> under the feature): it moves to end on the line, with the finish arch over it. Past the finish line is the <b>run-off</b> (the first section, yellow), where riders pull up; the way back from it is never drawn. The platform has four gates, two each side of the starter's box, and no start board official.</li>
+    <li><b>Move whole track</b> picks the whole track up as one piece, on any Kind: it follows the pointer, and a click drops it, with its start, features, scenery, ground paint and heights. It moves in whole ground cells, so the paint stays under it.</li>
+    <li><b>Enduro Sprint</b> (a Kind) is a timed test ridden one rider at a time, a few seconds apart, the lowest total time over the laps winning; a one-lap timed qualifying sets the start order. It follows its own building rules instead of a start straight: close the route, place the <b>Finish line</b>, then pick <b>Start line</b> under Start and finish and put it on the route where riders leave from. The stretch from the finish line round to the start line becomes the <b>return lane</b> (the first section, yellow): a single-file lane a quarter of the track's width, with stakes and tape down both sides, ridden at half speed and never timed, where riders queue for their next lap. It needs at least 20 grid units for the queue and must never cross or run into the test; there is no start gate, no start straight and no start board official. The race view builds the start on the start line: a sponsor arch with a timing beam under it, the clock, the timekeeper with a stopwatch and the scorer with a clipboard; place a <b>Sprint start</b> from Scenery to choose its words and colour (it snaps onto the start line). The <b>enduro sections</b> go on any track as features: <i>Rock garden</i>, <i>Tree roots</i>, <i>Log crossing</i> (four logs across the track), <i>Log step</i> (one big log), <i>Water crossing</i> (a stream across the track and out into the grass, with spray), <i>Off-camber</i> (the track falls away to the outside of the corner), <i>Hill climb</i> (a long steep climb to a crest) and <i>Woods singletrack</i> (trees close on both sides). <b>Boulders</b> and <b>Log piles</b> are trackside scenery to dress them.</li>
     <li class="final-hide"><b>Sections</b> are what the race simulation rides, in order. Each is placed on the drawing by its share of the lap length and ridden as its type whatever shape is drawn there; the panel says what the shape reads as (straight, sweeper, corner or hairpin). On a track from before features, <b>From drawing</b> replaces the sections with straights and corners that suit the drawing, if you ask for it. Click the track to pick the section under the pointer. Drag a white diamond to move metres between two sections. The section box sets the line riders take through it and the height of jumps and hills. <b>Supercross jumps</b> (from the jump chart): Triple, Quad, Step-up, Step-down, Step-on step-off (a single, a tabletop with a lip on its end, a single; Step-on with two or three tables puts more tabletops between, hopped lip to table), On-off, Single over table, Table over single, Wall jump, Ski jump, Rhythm section, Rollers and a Dragon's back (four humps each bigger than the last, building up to a big final mound launched off). Riders take each jump their own way by their jumping skill and the lap: a tabletop cleared or landed short and ridden off, a triple doubled then singled, a quad as a quad, a double-double or single-double-single, and a mistake comes up short on the face. <b>Tunnels:</b> a tabletop, step-up or step-on has a <b>Tunnel</b> choice: <i>The track passes under it</i> when another part of the route is drawn across its deck (the flat top in the middle), so riders there go through the tunnel while the rest jump over, or <i>A pedestrian tunnel</i>. Both sides of the deck become concrete walls with the opening and a portal frame, and the map draws the hole as a dark band. Choosing the track tunnel makes the feature at least 22 grid units long and 3.5 m high; the checks say when nothing passes under the deck, when the deck is too short for the lower track, or when the jump is too low.</li>
     <li class="final-hide"><b>Gates</b> is the start bonus curve, in percent of start time, best gate first (Spec 10.4).</li>
     <li><b>Surfaces:</b> mud, sand, water and other patches along the lap, laid by clicking the track: the stretch a click would surface follows the pointer in the surface's colour. Click a patch to select it and drag it along the lap; its start and length can be typed in too.</li>
@@ -377,8 +386,9 @@ body.final .final-hide { display: none !important; }
 
 <script>
 'use strict';
-const GRID_W = 100;
-const GRID_H = 60;
+// The grid: 100 × 60, or a No-Turn Takedown's long, slim 200 × 30 (syncGrid, as trackGeom.ts gridOf).
+let GRID_W = 100;
+let GRID_H = 60;
 const DEFAULT_WIDTH = 3.4;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.vite', 'coverage', '.cache', 'maps', 'characters']);
 const ART_DIR = 'assets/art/area-map/tiled/tiles';
@@ -387,7 +397,7 @@ const ID = /^[a-z0-9_.-]+$/;
 const JUMPS = new Set(['tabletop', 'double', 'step_up', 'triple', 'quad', 'step_down', 'step_on', 'step_on_two', 'step_on_three', 'on_off', 'single_over_table', 'table_over_single', 'wall_jump', 'ski_jump', 'rhythm', 'whoops', 'rollers', 'dragon_back']);
 // How many humps each jump has, for the map's bars (mirrors src/core/jumps.ts).
 const HUMPS = { tabletop: 1, double: 2, step_up: 2, triple: 3, quad: 4, step_down: 2, step_on: 3, step_on_two: 4, step_on_three: 5, on_off: 2, single_over_table: 2, table_over_single: 2, wall_jump: 1, ski_jump: 1, rhythm: 3, whoops: 3, rollers: 2, dragon_back: 4 };
-const HEIGHTS = new Set([...JUMPS, 'uphill', 'downhill']);
+const HEIGHTS = new Set([...JUMPS, 'uphill', 'downhill', 'hill_climb', 'rocks', 'roots', 'logs', 'log_step']);
 // Mirrors src/core/trackSurface.ts DECKS and WALK_HOLE: the flat top of each jump that can carry a tunnel.
 const DECKS = { tabletop: [0.32, 0.6], step_on: [0.34, 0.6], step_up: [0.36, 0.58] };
 const WALLS = { tabletop: [0.2, 0.76], step_on: [0.27, 0.68], step_up: [0.24, 0.72] };
@@ -395,7 +405,7 @@ const WALK_HOLE = 1.2;
 // Mirrors src/core/jumps.ts ARCH_AT: where the finish arch stands over a finish-line jump, as a share of it.
 const ARCH_AT = { tabletop: 0.3, double: 0.3 };
 // Mirrors src/core/riderAI.ts DEFAULT_HEIGHTS.
-const DEFAULT_HEIGHTS_ED = { tabletop: 2.5, double: 3.5, step_up: 3, triple: 3.5, quad: 3.5, step_down: 3, step_on: 2, step_on_two: 2.2, step_on_three: 2.4, on_off: 2.2, single_over_table: 2.8, table_over_single: 2.8, wall_jump: 2.6, ski_jump: 3, rhythm: 1.5, whoops: 0.6, rollers: 0.9, dragon_back: 2.2, uphill: 6, downhill: 6 };
+const DEFAULT_HEIGHTS_ED = { tabletop: 2.5, double: 3.5, step_up: 3, triple: 3.5, quad: 3.5, step_down: 3, step_on: 2, step_on_two: 2.2, step_on_three: 2.4, on_off: 2.2, single_over_table: 2.8, table_over_single: 2.8, wall_jump: 2.6, ski_jump: 3, rhythm: 1.5, whoops: 0.6, rollers: 0.9, dragon_back: 2.2, uphill: 6, downhill: 6, hill_climb: 5, rocks: 0.35, roots: 0.18, logs: 0.4, log_step: 0.6 };
 /** The lowest height (metres) a jump with the track under it should have, so a bike clears it. */
 const TUNNEL_MIN_HEIGHT = 3.5;
 /** The shortest feature (grid units) whose deck can take the lower track with its lips and banks through it. */
@@ -410,7 +420,126 @@ const KINDS = [
   { name: 'Jumps', color: '#e05252', types: ['tabletop', 'double', 'step_up', 'triple', 'quad', 'step_down', 'step_on', 'step_on_two', 'step_on_three', 'on_off', 'single_over_table', 'table_over_single', 'wall_jump', 'ski_jump', 'rhythm', 'dragon_back'] },
   { name: 'Rough', color: '#b06ad8', types: ['whoops', 'rollers', 'braking_bumps', 'sand', 'mud'] },
   { name: 'Concrete', color: '#9c9c96', types: ['concrete_straight', 'concrete_corner', 'surface_change'] },
+  { name: 'Enduro', color: '#c8a040', types: ['rocks', 'roots', 'logs', 'log_step', 'water_crossing', 'off_camber', 'hill_climb', 'woods'] },
+  { name: 'Return lane', color: '#f0e030', types: ['return_lane'] },
+  { name: 'Run-off', color: '#f0e030', types: ['run_off'] },
 ];
+// Enduro sprints (Boss, 29 Oct 2026; mirrors src/core/trackGeom.ts and trackCheck.ts sprintProblems):
+// a timed test ridden one rider at a time. The lap starts at the finish line as any other, but its
+// first section is the return lane, a single-file lane a quarter of the track's width back round to
+// the start line, ridden at half speed and never timed. It has no start straight or start gate.
+const SPRINT_KIND = 'enduro_sprint';
+const RETURN_LANE = 'return_lane';
+const RETURN_WIDTH = 0.25;
+const RETURN_TAPER = 3;
+/** The shortest return lane, in grid units: room for a whole field to queue single file. */
+const RETURN_MIN = 20;
+/** The sprint's start: the arch over the start line, with the timekeeper and the scorer (trackClearance.ts SPRINT_START_ITEM). */
+const SPRINT_START = 'sprint_start';
+const isSprintKind = (t) => t?.kind === SPRINT_KIND;
+const isSprint = (t) => isSprintKind(t) && t.sections[0]?.type === RETURN_LANE;
+// No-Turn Takedown (Boss, 30 Oct 2026; mirrors src/core/trackGeom.ts and trackCheck.ts
+// noTurnProblems): a straight drag strip on a 200 × 30 grid, four riders at a time off a raised
+// start platform, in knockout heats. The drawing is still a closed loop from the finish line, but
+// its first section is the run-off: a few grid units past the finish line, then a hidden way back
+// to the start line that is never drawn or ridden. The run is the drawing's last edge, from the
+// start line straight to the finish line. The builder places the start platform, lengthens the run
+// with + Straight, and puts features on it; the drawing is never drawn by hand.
+const NO_TURN_KIND = 'no_turn';
+const RUN_OFF = 'run_off';
+const NO_TURN_RUNOFF = 8;
+const NO_TURN_HIDDEN = 40;
+const NO_TURN_LEAD = 2;
+const NO_TURN_GATES = 4;
+const NO_TURN_START = 10;
+const NO_TURN_RUN_MIN = 40;
+/** The run when the start platform is first placed, and what + Straight / − Straight add or take off, in grid units. */
+const NO_TURN_RUN = 100;
+const NO_TURN_STEP = 10;
+const NO_TURN_GRID = { w: 200, h: 30 };
+/** Section types that ride as corners, never on a No-Turn Takedown. */
+const NO_TURN_CORNERS = ['first_corner', 'flat_corner', 'berm', 'rutted_corner', 'hairpin', 'fast_sweeper', 'concrete_corner', 'off_camber'];
+const isNoTurnKind = (t) => t?.kind === NO_TURN_KIND;
+const isNoTurn = (t) => isNoTurnKind(t) && t.sections[0]?.type === RUN_OFF;
+/** Sets the grid for a track: a No-Turn Takedown's 200 × 30, else 100 × 60. */
+function syncGrid(t) {
+  const g = isNoTurnKind(t) ? NO_TURN_GRID : { w: 100, h: 60 };
+  GRID_W = g.w;
+  GRID_H = g.h;
+}
+/** A No-Turn Takedown's drawing (trackGeom.ts noTurnPath): finish line, run-off, the hidden way back, start line last. */
+function noTurnPath(sx, sy, ang, run, side = 1) {
+  const dx = Math.cos(ang);
+  const dy = Math.sin(ang);
+  const nx = dy * side;
+  const ny = -dx * side;
+  const at = (along, off) => [round2(sx + dx * along + nx * off), round2(sy + dy * along + ny * off)];
+  const end = run + NO_TURN_RUNOFF;
+  return [at(run, 0), at(end, 0), at(end, NO_TURN_HIDDEN), at(-NO_TURN_LEAD, NO_TURN_HIDDEN), at(-NO_TURN_LEAD, 0), at(0, 0)];
+}
+/** Its start platform (trackGeom.ts noTurnStartPath): the gate NO_TURN_START grid units back from the start line. */
+function noTurnStartPath(sx, sy, ang) {
+  return [[round2(sx - Math.cos(ang) * NO_TURN_START), round2(sy - Math.sin(ang) * NO_TURN_START)], [round2(sx), round2(sy)]];
+}
+/** The strip as drawn: its start line, heading and run; null on a track that isn't one yet. */
+function noTurnStrip(t) {
+  if (!isNoTurnKind(t) || t.path.length !== 6 || t.open) return null;
+  const [sx, sy] = t.path[5];
+  const [fx, fy] = t.path[0];
+  return { sx, sy, ang: Math.atan2(fy - sy, fx - sx), run: Math.hypot(fx - sx, fy - sy) };
+}
+/** The side for the hidden way back that keeps every point of the drawing at 0 or more, as a track file needs. */
+function noTurnSide(sx, sy, ang, run) {
+  for (const side of [1, -1]) if (noTurnPath(sx, sy, ang, run, side).every(([x, y]) => x >= 0 && y >= 0)) return side;
+  return 1;
+}
+/**
+ * Lays the strip out from its start line (sx, sy), heading and run: the drawing, the start
+ * platform, the run-off feature and four gates. Features on the run keep their place from the
+ * start line; any now past the finish line are cut back or taken off.
+ */
+function setNoTurn(t, sx, sy, ang, run) {
+  const old = noTurnStrip(t);
+  const oldHidden = old ? lapGeom(t).total - old.run : null;
+  t.path = noTurnPath(sx, sy, ang, run, noTurnSide(sx, sy, ang, run));
+  delete t.layout;
+  delete t.open;
+  delete t.finish;
+  setKeyNear(t, 'start', { path: noTurnStartPath(sx, sy, ang) }, 'sections');
+  if (!t.gates || t.gates.length !== NO_TURN_GATES) setKeyNear(t, 'gates', [0, 0, 0, 0], 'path');
+  const total = lapGeom(t).total;
+  const hidden = round2(total - run);
+  const feats = (t.features ?? []).filter((f) => f.type !== RUN_OFF).map((f) => ({ ...f, at: oldHidden === null ? f.at : round1(f.at - oldHidden + hidden) }));
+  t.features = [{ type: RUN_OFF, at: 0, len: hidden, passing: 0.5 }, ...feats.filter((f) => f.at >= hidden && f.at < total - 0.5).map((f) => ({ ...f, len: Math.min(f.len, round1(total - f.at)) }))];
+  derive(t);
+}
+/** Problems with a No-Turn Takedown, worded as the game's check words them (trackCheck.ts noTurnProblems). */
+function noTurnProblems(t) {
+  const out = [];
+  if (!isNoTurn(t)) { out.push("a No-Turn Takedown's first section is the run-off past the finish line, where riders pull up: place the start platform (Start and finish)"); return out; }
+  if (t.sections.length < 2) { out.push('a No-Turn Takedown needs its run: sections after the run-off, from the start line to the finish line'); return out; }
+  const strip = noTurnStrip(t);
+  const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.06;
+  if (!strip || ![1, -1].some((side) => noTurnPath(strip.sx, strip.sy, strip.ang, strip.run, side).every((p, i) => near(p, t.path[i])))) {
+    out.push('a No-Turn Takedown has no bends: the run goes in one straight line from the start line to the finish line, with the run-off straight on past it; place the start platform again');
+    return out;
+  }
+  if (strip.run < NO_TURN_RUN_MIN) out.push(`the run is ${strip.run.toFixed(1)} grid units from the start line to the finish line; it needs at least ${NO_TURN_RUN_MIN} (+ Straight)`);
+  const g = lapGeom(t);
+  const b = sectionBounds(t);
+  if (Math.abs(b[1] * g.total - g.cum[5]) > 0.5) out.push("the run-off section's length doesn't match the drawing: place the start platform again");
+  const start = noTurnStartPath(strip.sx, strip.sy, strip.ang);
+  const st = t.start?.path;
+  if (!st || st.length !== 2 || !st.every((p, i) => near(p, start[i]))) out.push('the start platform runs straight into the run from its gate, in line with it; place it again');
+  if (t.gates && t.gates.length !== NO_TURN_GATES) out.push(`a No-Turn Takedown has ${NO_TURN_GATES} gates on its start platform, not ${t.gates.length}`);
+  const width = t.width ?? DEFAULT_WIDTH;
+  for (const [x, y] of [start[0], [strip.sx, strip.sy], t.path[0], t.path[1]]) {
+    if (x < width / 2 || y < width / 2 || x > NO_TURN_GRID.w - width / 2 || y > NO_TURN_GRID.h - width / 2) { out.push(`the track runs off the ${NO_TURN_GRID.w} × ${NO_TURN_GRID.h} grid near ${x.toFixed(0)}, ${y.toFixed(0)}; move it back on (Move whole track)`); break; }
+  }
+  t.sections.forEach((sec, i) => { if (NO_TURN_CORNERS.includes(sec.type)) out.push(`section ${i + 1} is a corner (${app.sectionDefs[sec.type]?.name ?? sec.type}); a No-Turn Takedown has no bends or corners`); });
+  t.sections.forEach((sec, i) => { if (sec.finish && i !== t.sections.length - 1) out.push(`section ${i + 1} is a finish-line jump, but the finish line is at the end of the run: only the last section can be one`); });
+  return out;
+}
 const OTHER_COLOR = '#f0a020';
 // Used when there is no trackParts.json next to tracks.json.
 const FALLBACK_PARTS = {
@@ -551,6 +680,7 @@ function exportTracks(d) {
 // beside the game's own, marked with modFile: their file in public/mods/tracks/ ('' until named).
 // They are saved there, one file each, and never into tracks.json.
 const MOD_DIR = 'mods/tracks';
+const MODEL_DIR = 'mods/models';
 const isMod = (t) => t.modFile !== undefined;
 /** Whether a track is in the list: mod tracks always; the game's own only when Show the game's tracks is ticked (Development), or when there are no mod tracks to show. */
 const shown = (t) => isMod(t) || app.showGame || !app.data.tracks.some(isMod);
@@ -631,7 +761,11 @@ const app = {
   images: new Map(), // art path -> HTMLImageElement, or missing while loading
   artBase: null,
 };
-const track = () => app.data?.tracks[app.cur];
+const track = () => {
+  const t = app.data?.tracks[app.cur];
+  syncGrid(t);
+  return t;
+};
 const sceneryDef = (id) => app.parts.scenery.find((s) => s.id === id);
 const groundDef = (id) => app.parts.ground.find((g) => g.id === id);
 const surfaceDef = (id) => app.parts.surfaces.find((s) => s.id === id);
@@ -711,6 +845,8 @@ async function openFolder() {
     $('#dirInput').click();
   }
 }
+// The game's models page (src/scenes/ModelsScene.ts): this copy of the game when served, else the published one.
+$('#btnModels').addEventListener('click', () => window.open(/^https?:$/.test(location.protocol) ? new URL('../?models', location.href).href : `${PUBLISHED_GAME}?models`, '_blank'));
 $('#dirInput').addEventListener('change', async (e) => { if (e.target.files.length) await useSource(new ListSource(e.target.files)); });
 
 async function useSource(src) {
@@ -749,6 +885,15 @@ async function useSource(src) {
       t.modFile = file;
       data.tracks.push(t);
       modSaved[file] = modText(t);
+    }
+    // New scenery from the models folder (src/core/modModels.ts), as the game adds it: the dev
+    // server lists each model with its item; opened from disk the editor can't measure them.
+    if (src.http) {
+      try {
+        const r = await fetch(`${src.base}../${MODEL_DIR}/index.json`, { cache: 'no-store' });
+        const models = r.ok ? await r.json() : [];
+        for (const m of Array.isArray(models) ? models : []) if (m?.def && !parts.scenery.some((d) => d.id === m.def.id)) parts.scenery.push(m.def);
+      } catch { /* no models folder */ }
     }
     Object.assign(app, { tracksPath, modDir, modSaved, data, sectionDefs, parts, final, artBase, cur: 0, undo: [], redo: [], savedText: text, play: null, images: new Map() });
     // The editor opens on the mod tracks (the example, and any saved): the game's own four are for
@@ -827,7 +972,10 @@ function lapGeom(t) {
   if (!t.open && pts.length) pts.push({ ...pts[0] });
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-  return { pts, cum, total: cum.at(-1) || 1, open: !!t.open };
+  const total = cum.at(-1) || 1;
+  // A No-Turn Takedown's way back from the run-off to the start line is never drawn or snapped to (trackGeom.ts hiddenSpans).
+  const hidden = isNoTurnKind(t) && t.path.length === 6 && !t.open ? [[cum[1] / total, cum[5] / total]] : [];
+  return { pts, cum, total, open: !!t.open, hidden };
 }
 function pointAt(g, f) {
   const d = (g.open ? clamp(f, 0, 1) : ((f % 1) + 1) % 1) * g.total;
@@ -842,6 +990,7 @@ function pointAt(g, f) {
 function project(g, x, y) {
   let best = { f: 0, dist: Infinity, seg: 0 };
   for (let i = 1; i < g.pts.length; i++) {
+    if (g.hidden?.length && i >= 2 && i <= 5) continue;
     const a = g.pts[i - 1];
     const b = g.pts[i];
     const dx = b.x - a.x;
@@ -950,7 +1099,7 @@ const FIRST_CORNER_SHARE = 0.25;
  * first-corner incident. Null without a start straight.
  */
 function firstCornerLeg(t) {
-  if (!t) return null;
+  if (!t || isNoTurnKind(t)) return null;
   const sg = startGeom(t);
   if (!sg || sg.total <= 0) return null;
   const n = sg.pts.length;
@@ -1205,13 +1354,15 @@ function splitSegment(t, seg, u) {
 function derive(t) {
   if (!t) return;
   if (t.layout) rebuildPath(t); else LIDX.delete(t);
+  // A sprint's return lane always runs from the finish line, wherever the finish line moves.
+  for (const f of t.features ?? []) if (f.type === RETURN_LANE || f.type === RUN_OFF) f.at = 0;
   if (t.features) rebuildSections(t);
 }
 /**
  * Every section type that is placed as a feature: all but the start gate, the plain track the
  * route is itself, and the first corner, which is the start straight's end (firstCornerLeg).
  */
-const featureTypes = () => sectionTypes().filter((x) => x !== 'start_gate' && x !== 'first_corner' && !isBaseType(x));
+const featureTypes = () => sectionTypes().filter((x) => x !== 'start_gate' && x !== 'first_corner' && x !== RETURN_LANE && x !== RUN_OFF && !isBaseType(x));
 /**
  * The sections from the route and its features: the route's own plain track cut by the features,
  * in riding order from the first point. A feature past the end of the route is left out, one past
@@ -1386,7 +1537,7 @@ function patchAt(t, metres) {
 }
 function itemBox(it) {
   const def = sceneryDef(it.type);
-  const w = it.type === 'finish_arch' ? archSpan((track()?.width ?? DEFAULT_WIDTH)) : it.w ?? def?.w ?? 2;
+  const w = it.type === 'finish_arch' || it.type === SPRINT_START ? archSpan((track()?.width ?? DEFAULT_WIDTH)) : it.w ?? def?.w ?? 2;
   return { w, h: it.h ?? def?.h ?? 2, a: ((it.rot ?? 0) * Math.PI) / 180 };
 }
 /** How wide the finish arch stands for a track width: its posts just outside the lips (src/core/trackClearance.ts archSpan). */
@@ -1398,6 +1549,96 @@ function archPlace(t) {
   const deg = (headingAt(g, 0) * 180) / Math.PI;
   return { x: t.path[0][0], y: t.path[0][1], rot: ((Math.round(deg) + 90) % 360 + 360) % 360 };
 }
+// ---- enduro sprints ----
+
+/** Where a sprint's start line is, as a lap fraction: the end of the return lane (trackGeom.ts sprintStart). */
+function sprintStartF(t) { return sectionBounds(t)[1]; }
+/** The track's width at lap fraction f as a share of its full width: a quarter along a sprint's return lane (trackGeom.ts widthShare). */
+function widthShare(t, g, f) {
+  if (!isSprint(t)) return 1;
+  const x = ((f % 1) + 1) % 1;
+  const end = sprintStartF(t);
+  if (x > end) return 1;
+  const d = Math.min(x, end - x) * g.total;
+  const k = clamp(d / RETURN_TAPER, 0, 1);
+  return 1 - (1 - RETURN_WIDTH) * k * k * (3 - 2 * k);
+}
+/** Where a sprint's start belongs: on the start line, square to the track there (trackClearance.ts sprintPlace). */
+function sprintPlace(t) {
+  if (!isSprint(t) || t.path.length < 2) return null;
+  const g = lapGeom(t);
+  const f = sprintStartF(t);
+  const p = pointAt(g, f);
+  const deg = (headingAt(g, f) * 180) / Math.PI;
+  return { x: round2(p.x), y: round2(p.y), rot: ((Math.round(deg) + 90) % 360 + 360) % 360 };
+}
+/** Puts the sprint's start on the start line, square to the track. */
+function snapSprintStart(t) {
+  const at = sprintPlace(t);
+  if (!at) return;
+  for (const it of t.scenery ?? []) if (it.type === SPRINT_START) { it.x = at.x; it.y = at.y; it.rot = at.rot; delete it.w; }
+}
+/**
+ * An Enduro Sprint's own rules in place of the start straight's (src/core/trackCheck.ts
+ * sprintProblems): the return lane is its first section, from the finish line round to the start
+ * line, long enough for the queue, with no start straight, and nowhere does it cross or run into the
+ * test but where it leaves the finish line and joins the start line.
+ */
+function sprintProblems(t) {
+  const out = [];
+  if (!isSprint(t)) { out.push("an Enduro Sprint's first section is the return lane, the single-file lane from the finish line back to the start line: pick Start line under Start and finish and put it on the route where riders leave from"); return out; }
+  if (t.start?.path?.length) out.push('an Enduro Sprint has no start straight or start gate: riders leave one at a time from the start line at the end of the return lane, so remove it (Remove start straight)');
+  if (t.sections.length < 2) { out.push('an Enduro Sprint needs its test: sections after the return lane, from the start line to the finish line'); return out; }
+  if (t.path.length < 3 || t.open) return out;
+  const g = lapGeom(t);
+  const b = sectionBounds(t);
+  const lane = b[1] * g.total;
+  if (lane < RETURN_MIN) out.push(`the return lane is ${lane.toFixed(1)} grid units long; it needs at least ${RETURN_MIN} for the riders to queue single file at the start line`);
+  const width = t.width ?? DEFAULT_WIDTH;
+  const clear = width / 2 + (width * RETURN_WIDTH) / 2 + 0.5;
+  const ends = RETURN_TAPER + clear + 1;
+  const test = [];
+  for (let u = b[1] * g.total; u <= g.total; u += 0.25) test.push(pointAt(g, u / g.total));
+  for (let d = ends; d < lane - ends; d += 0.25) {
+    const p = pointAt(g, d / g.total);
+    let near = Infinity;
+    for (const q of test) near = Math.min(near, Math.hypot(q.x - p.x, q.y - p.y));
+    if (near < clear) { out.push(`the return lane runs into the test at ${p.x.toFixed(0)}, ${p.y.toFixed(0)}; it must never cross the track, so keep it at least ${clear.toFixed(1)} grid units clear`); break; }
+  }
+  return out;
+}
+/**
+ * Makes the stretch from the finish line to `d` grid units round the lap the return lane, the rest
+ * staying where it is on the route: on a track with features, the return-lane feature; on one
+ * without, the first section, with the sections it now covers cut back.
+ */
+function setReturnLane(t, d) {
+  const g = lapGeom(t);
+  if (t.features) {
+    const f = t.features.find((x) => x.type === RETURN_LANE);
+    if (f) { f.at = 0; f.len = round1(d); } else t.features.unshift({ type: RETURN_LANE, at: 0, len: round1(d), passing: 0 });
+    derive(t);
+    return;
+  }
+  const lap = lapLength(t);
+  const cut = Math.max(1, Math.round((d / g.total) * lap));
+  const rest = [];
+  let at = 0;
+  t.sections.forEach((s, i) => {
+    const a = at;
+    at += s.length;
+    if (i === 0 && s.type === RETURN_LANE) return;
+    const from = Math.max(a, cut);
+    if (at - from >= 1) rest.push({ ...s, length: Math.round(at - from) });
+  });
+  t.sections = [{ type: RETURN_LANE, length: cut, passing: 0 }, ...rest];
+}
+/** Takes the return lane off: on a track without features its stretch becomes a straight. */
+function removeReturnLane(t) {
+  if (t.features) { t.features = t.features.filter((x) => x.type !== RETURN_LANE); derive(t); return; }
+  if (t.sections[0]?.type === RETURN_LANE) t.sections[0] = { type: BASE_TYPE, length: t.sections[0].length, passing: PIECE_PASS.straight };
+}
+
 /** True when a finish arch stands on the finish line, square to the track (within half a grid unit and 5°). */
 function archOnLine(t, it) {
   const at = archPlace(t);
@@ -1447,6 +1688,13 @@ const toScreen = (x, y) => ({ x: view.ox + x * view.k, y: view.oy + y * view.k }
 const toGrid = (sx, sy) => ({ x: (sx - view.ox) / view.k, y: (sy - view.oy) / view.k });
 
 function strokeLap(g, from, to, color, width, cap = 'round') {
+  for (const [h0, h1] of g.hidden ?? []) {
+    if (from < h1 && to > h0) {
+      if (from < h0) strokeLap({ ...g, hidden: [] }, from, h0, color, width, cap);
+      if (to > h1) strokeLap({ ...g, hidden: [] }, h1, to, color, width, cap);
+      return;
+    }
+  }
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = cap;
@@ -1664,6 +1912,8 @@ function colliders(f) {
     case 'start_gate': return [];
     case OFFICIAL: return [];
     case 'finish_arch': return [along(-(f.w / 2 - 0.25), 0.5, 0.5), along(f.w / 2 - 0.25, 0.5, 0.5)];
+    // The arch's two posts and the officials with their clock past its right-hand end (trackClearance.ts).
+    case SPRINT_START: return [along(-(f.w / 2 - 0.45), 0.9, 0.9), along(f.w / 2 - 0.45, 0.9, 0.9), along(f.w / 2 + 1.0, 1.3, 2.4)];
     case 'tree': return [along(0, 0.35, 0.35)];
     case 'light_tower': return [along(0, 0.25, 0.25)];
     case 'flag_post': return [along(0, 0.1, 0.1)];
@@ -1702,13 +1952,14 @@ function overlap(p, q) {
 }
 function sceneryIssues(t) {
   if (t.path.length < 2) return [];
-  const key = JSON.stringify([t.path, t.start, t.width, t.scenery]);
+  const key = JSON.stringify([t.path, t.start, t.width, t.scenery, t.kind, isSprint(t) ? t.sections : 0]);
   const hit = issueCache.get(t);
   if (hit && hit.key === key) return hit.out;
   const g = lapGeom(t);
   const hw = (t.width ?? DEFAULT_WIDTH) / 2;
   const n = Math.max(200, Math.ceil(g.total / 0.25));
-  const pts = Array.from({ length: n }, (_, i) => ({ ...pointAt(g, i / n), hw }));
+  // A sprint's return lane is a quarter of the width (widthShare).
+  const pts = Array.from({ length: n }, (_, i) => ({ ...pointAt(g, i / n), hw: hw * widthShare(t, g, i / n) }));
   const st = startGeom(t, g);
   if (st && st.total > 0) for (let u = -START_PAD; u <= st.total; u += 0.25) pts.push({ ...startPointAt(st, u), hw: startHalfWidth(st, u, hw) });
   const off = (x, y) => { let best = Infinity; for (const p of pts) { const d = Math.hypot(p.x - x, p.y - y) - p.hw; if (d < best) best = d; } return best; };
@@ -1789,6 +2040,7 @@ function draw() {
   if (t.path.length < 2) { drawLayout(t, null); drawGhost(); return; }
   const g = lapGeom(t);
   const pathLine = (color, wd) => {
+    if (g.hidden.length) return strokeLap(g, 0, 1, color, wd);
     ctx.strokeStyle = color;
     ctx.lineWidth = wd;
     ctx.lineCap = 'round';
@@ -1901,7 +2153,7 @@ function draw() {
     const b = sectionBounds(t);
     t.sections.forEach((sec, si) => {
       if (!sec.finish || b[si + 1] === undefined) return;
-      const p = pointAt(g, b[si] + (ARCH_AT[sec.type] ?? 0.5) * (b[si + 1] - b[si]));
+      const p = pointAt(g, isNoTurn(t) ? b[si + 1] - 1e-4 : b[si] + (ARCH_AT[sec.type] ?? 0.5) * (b[si + 1] - b[si]));
       const s = toScreen(p.x, p.y);
       const a = p.ang + Math.PI / 2;
       const r = (width + 4) / 2;
@@ -2214,6 +2466,8 @@ function refresh() {
     if (app.selPt === 0) $('#btnStart').disabled = true;
     // An open route has no lap to ride, reverse or start on yet.
     if (t.open || L.length < 3) for (const id of ['#btnFitSecs', '#btnPlay', '#btnReverse', '#btnStart']) $(id).disabled = true;
+    // A No-Turn Takedown is placed whole: none of the route's shaping tools apply.
+    if (isNoTurnKind(t)) for (const id of ['#btnDelPt', '#btnRound', '#btnStart', '#btnInsert', '#btnDelSeg', '#btnAddStart', '#btnAddFinish', '#btnReverse', '#btnFit']) $(id).disabled = true;
     if (app.selPt >= 0 && (L.length < 3 || (t.open && (app.selPt === 0 || app.selPt === L.length - 1)))) $('#btnRound').disabled = true;
   }
   $('#btnPlay').textContent = app.play ? '■ Stop' : '▶ Preview';
@@ -2558,7 +2812,19 @@ function renderFeatureDetail(t, k) {
     fin.checked = !!f.finish;
     fin.title = 'Make this jump the finish line: the lap starts and ends at its foot and the finish arch is built over it (a scenery finish arch is taken away), its posts on the banks beside the track, high enough that a rider still in the air goes under the banner.';
     fin.addEventListener('change', () => {
-      if (fin.checked) {
+      if (fin.checked && isNoTurnKind(t)) {
+        // A strip's finish line is the end of the run: the jump goes there, its far foot on the line.
+        commit((t) => {
+          const total = lapGeom(t).total;
+          for (const o of t.features) delete o.finish;
+          t.features[k].at = round1(total - t.features[k].len);
+          t.features[k].finish = true;
+          if (t.scenery) t.scenery = t.scenery.filter((it) => it.type !== 'finish_arch');
+          app.selFeat = k;
+          app.selSec = sectionOfFeature(t, k);
+        });
+        status('This jump is the finish line: the run ends at its far foot, with the finish arch over the line.', 'ok');
+      } else if (fin.checked) {
         commit((t) => {
           const total = lapGeom(t).total;
           setFinish(t, (t.features[k].at % total) / total);
@@ -3193,7 +3459,18 @@ function renderSceneryDetail() {
     field('Colour', col);
   }
   const num = (v, ph, step) => { const i = document.createElement('input'); i.type = 'number'; i.step = String(step); i.min = '0'; i.value = v === undefined ? '' : String(v); i.placeholder = ph; return i; };
-  if (it.type === 'finish_arch') {
+  if (it.type === SPRINT_START) {
+    const note = document.createElement('div');
+    note.className = 'hint';
+    note.textContent = `An Enduro Sprint's start: the arch over the start line with its words, the timing beam under it, and the timekeeper (stopwatch) and the scorer (clipboard) by the right-hand post. It spans the track's width (${archSpan(t.width ?? DEFAULT_WIDTH).toFixed(1)} grid units) and belongs on the start line, square to the track. Without one, the race view builds one there in the default colours.`;
+    box.appendChild(note);
+    const snap = document.createElement('button');
+    snap.textContent = 'Put on the start line';
+    snap.title = 'Moves the sprint start onto the start line (the end of the return lane) and turns it square to the track there. Placing the start line does this too.';
+    snap.disabled = !sprintPlace(t);
+    snap.addEventListener('click', () => { commit((t) => snapSprintStart(t)); status('The sprint start is on the start line, square to the track.', 'ok'); });
+    box.appendChild(snap);
+  } else if (it.type === 'finish_arch') {
     const note = document.createElement('div');
     note.className = 'hint';
     note.textContent = `Spans the track's width (${archSpan(t.width ?? DEFAULT_WIDTH).toFixed(1)} grid units for this track), its posts just outside the lips, and belongs on the finish line, square to the track.`;
@@ -3483,10 +3760,13 @@ function checkTrack(t, all, strict = false) {
       if (!t.name?.trim()) warn.push('The track needs a name.');
       for (const c of boundaryCrossings(t)) { const text = boundaryText(t, c, true); warn.push(text); refs.set(text, { pt: c.seg }); }
       for (const p of featureProblems(t)) { warn.push(p.message); refs.set(p.message, { feat: p.k }); }
-      if (!t.start) warn.push('No start straight yet: pick Start straight under Start and finish. Its end goes on the route where riders join it.');
+      if (isSprintKind(t)) {
+        if (!isSprint(t)) warn.push('No start line yet: an Enduro Sprint starts from the end of its return lane. Once the route is closed, pick Start line under Start and finish and put it on the route where riders leave from.');
+        else for (const m of sprintProblems(t)) warn.push(`Sprint: ${m}`);
+      } else if (!t.start) warn.push('No start straight yet: pick Start straight under Start and finish. Its end goes on the route where riders join it.');
       else if (t.path.length >= 2) for (const m of startProblems(t)) warn.push(`Race start: ${m}`);
       if (t.finish === false) warn.push('No finish line yet: once the route is closed, pick Finish line under Start and finish and put it on the route where every lap starts and ends.');
-      for (const m of officialNotes(t)) { warn.push(m.text); if (m.i >= 0) refs.set(m.text, { item: m.i }); }
+      if (!isSprintKind(t) && !isNoTurnKind(t)) for (const m of officialNotes(t)) { warn.push(m.text); if (m.i >= 0) refs.set(m.text, { item: m.i }); }
       for (const p of [...cheerProblems(t), ...marshalProblems(t)]) { warn.push(p.message); refs.set(p.message, { item: p.i }); }
       for (const p of elevationIssues(t)) warn.push(`Height: ${p.message} (${p.level === 'error' ? 'red' : 'yellow'} ring in Height mode).`);
       return { bad: [], warn, refs };
@@ -3494,9 +3774,9 @@ function checkTrack(t, all, strict = false) {
     // A closed lap still unfinished: what the circuit itself needs fixing, apart from what the race
     // still needs placed (start straight, finish line, official), which is readiness, not a fault.
     const r = checkTrack(t, all, true);
-    const ready = r.bad.filter((m) => /^(Race start|Finish line):/.test(m));
+    const ready = r.bad.filter((m) => /^(Race start|Finish line|Sprint):/.test(m));
     const circuit = r.bad.filter((m) => !ready.includes(m));
-    const needs = [t.finish === false && 'a finish line', !t.start && 'a start straight'].filter(Boolean);
+    const needs = [t.finish === false && 'a finish line', isSprintKind(t) ? !isSprint(t) && 'a start line (the end of the return lane)' : !t.start && 'a start straight'].filter(Boolean);
     const warn = [circuit.length
       ? `Unfinished: the route is closed, with ${circuit.length} thing${circuit.length === 1 ? '' : 's'} to fix in the circuit before Ready to race (below). The game leaves this track out until then.`
       : needs.length
@@ -3558,11 +3838,24 @@ function checkTrack(t, all, strict = false) {
       if (!app.sectionDefs[s.type] || feats[i] >= 0) return;
       if (s.type === 'start_gate') bad.push(`Section ${i + 1} is a start gate on the lap. The start is its own start straight now, so make this a straight.`);
     });
+    t.sections.forEach((s, i) => {
+      if (s.type === RETURN_LANE && !(isSprintKind(t) && i === 0)) bad.push(isSprintKind(t) ? `Section ${i + 1} is a return lane: an Enduro Sprint has one, its first section, from the finish line to the start line.` : `Section ${i + 1} is a return lane, which only an Enduro Sprint has: set Kind to Enduro Sprint, or make it another section.`);
+    });
   }
-  bad.push(...startProblems(t).map((m) => `Race start: ${m}`));
+  if (isSprintKind(t)) bad.push(...sprintProblems(t).map((m) => `Sprint: ${m}`));
+  else if (isNoTurnKind(t)) bad.push(...noTurnProblems(t).map((m) => `No-Turn Takedown: ${m}`));
+  else bad.push(...startProblems(t).map((m) => `Race start: ${m}`));
   if (t.finish === false) bad.push('Finish line: none placed yet. Pick Finish line under Start and finish (or + Finish line above the view) and put it on the route where every lap starts and ends; it is never placed for you.');
   const oi = officialIndex(t);
-  if (oi >= 0) {
+  if (oi >= 0 && isNoTurnKind(t)) {
+    const text = `Scenery item ${oi + 1}: a No-Turn Takedown has no start board official (the starter stands in the starter's box on the start platform); delete them (click here to find them).`;
+    bad.push(text);
+    refs.set(text, { item: oi });
+  } else if (oi >= 0 && isSprintKind(t)) {
+    const text = `Scenery item ${oi + 1}: an Enduro Sprint has no start board official (riders leave one at a time from the start line, sent off by the timekeeper); delete them (click here to find them).`;
+    bad.push(text);
+    refs.set(text, { item: oi });
+  } else if (oi >= 0) {
     const probs = [...officialLocalProblems(t), ...(t === track() ? officialProblems(t) ?? [] : [])].filter((m, k, a) => a.indexOf(m) === k);
     for (const m of probs) {
       const text = `Scenery item ${oi + 1}: ${m[0].toUpperCase()}${m.slice(1)} (click here to find it).`;
@@ -3570,8 +3863,19 @@ function checkTrack(t, all, strict = false) {
       refs.set(text, { item: oi });
     }
   }
-  for (const m of officialNotes(t)) { warn.push(m.text); if (m.i >= 0) refs.set(m.text, { item: m.i }); }
+  if (!isSprintKind(t) && !isNoTurnKind(t)) for (const m of officialNotes(t)) { warn.push(m.text); if (m.i >= 0) refs.set(m.text, { item: m.i }); }
   for (const p of [...cheerProblems(t), ...marshalProblems(t)]) { (p.level === 'error' ? bad : warn).push(p.message); refs.set(p.message, { item: p.i }); }
+  // A sprint's start belongs on its start line; the race view builds one there when the track places none.
+  const sp = sprintPlace(t);
+  if (sp) (t.scenery ?? []).forEach((it, i) => {
+    if (it.type !== SPRINT_START) return;
+    const dr = Math.abs(((((it.rot ?? 0) - sp.rot) % 180) + 270) % 180 - 90);
+    if (Math.hypot(it.x - sp.x, it.y - sp.y) <= 0.5 && dr <= 5) return;
+    const text = `Scenery item ${i + 1}: the sprint start at ${it.x}, ${it.y} is not on the start line at ${sp.x}, ${sp.y}, square to the track. Select it and click Put on the start line (click here to find it).`;
+    warn.push(text);
+    refs.set(text, { item: i });
+  });
+  if (!isSprintKind(t) && (t.scenery ?? []).some((it) => it.type === SPRINT_START)) warn.push('There is a sprint start on this track, but it is not an Enduro Sprint: riders start from the start gate.');
   const finishJump = t.sections.some((sec) => sec.finish);
   if (t.finish !== false && t.path.length >= 2) (t.scenery ?? []).forEach((it, i) => {
     if (it.type !== 'finish_arch') return;
@@ -3587,7 +3891,7 @@ function checkTrack(t, all, strict = false) {
     warn.push(text);
     refs.set(text, { item: i });
   });
-  if (!t.practiceOnly && !t.gates?.length) warn.push('No gate curve: every gate starts the same.');
+  if (!t.practiceOnly && !isSprintKind(t) && !t.gates?.length) warn.push('No gate curve: every gate starts the same.');
   // Two segments that cross make a figure of eight on screen, which the race screen can't show as a bridge.
   const g = lapGeom(t);
   const n = g.pts.length - 1;
@@ -3634,7 +3938,13 @@ function checkTrack(t, all, strict = false) {
   // What is in place, so the groups read as a whole.
   const good = [];
   if (t.path.length >= 3 && !t.open) good.push(`Circuit: a closed route of ${lpts(t).length} points and ${t.sections.length} section${t.sections.length === 1 ? '' : 's'}, ${lap} m${t.features ? `, with ${t.features.length} feature${t.features.length === 1 ? '' : 's'}` : ''}.`);
-  if (t.start) {
+  if (isSprint(t) && t.path.length >= 3 && !t.open) {
+    const lane = sprintStartF(t) * lapGeom(t).total;
+    good.push(`Sprint: the return lane runs ${Math.round(t.sections[0].length)} m (${lane.toFixed(0)} grid units) from the finish line to the start line, single file at a quarter of the track's width; the timed test is the other ${lap - t.sections[0].length} m. Riders leave the start line one at a time.`);
+  }
+  const strip = noTurnStrip(t);
+  if (strip && isNoTurn(t)) good.push(`No-Turn Takedown: a run of ${Math.round(strip.run * PIECE_MPU)} m (${strip.run.toFixed(0)} grid units) from the start platform straight to the finish line, then ${Math.round(NO_TURN_RUNOFF * PIECE_MPU)} m of run-off. Four gates, two each side of the starter's box.`);
+  if (t.start && !isSprintKind(t) && !isNoTurnKind(t)) {
     const sg = startGeom(t);
     const fc = firstCornerLeg(t);
     if (sg) good.push(`Race start: a start straight ${Math.round(sg.total * PIECE_MPU)} m from the gate, joining ${Math.round(sg.join * lap)} m into the lap.${fc ? ` The first corner is its end, ${fc.metres} m between ${fc.points}: the race rides it with the first corner's rules, and lap 1's first-corner incident happens there.` : ''}`);
@@ -3660,10 +3970,10 @@ const TIGHT_LANE = 0.9;
 function boundaryText(t, c, drafting) {
   const n = lpts(t).length;
   const where = n ? `the route between points ${c.seg} and ${(c.seg + 1) % n}` : 'the route';
-  return `Geometry: ${where} crosses the build boundary at ${c.x.toFixed(0)}, ${c.y.toFixed(0)}: the race ground ends at the 100 × 60 grid, so bring it back inside (its points are red) before the track ${drafting ? 'can be' : 'is'} ready to race.`;
+  return `Geometry: ${where} crosses the build boundary at ${c.x.toFixed(0)}, ${c.y.toFixed(0)}: the race ground ends at the ${GRID_W} × ${GRID_H} grid, so bring it back inside (its points are red) before the track ${drafting ? 'can be' : 'is'} ready to race.`;
 }
 function tightCorners(t) {
-  if (t.path.length < 3 || t.open) return [];
+  if (t.path.length < 3 || t.open || isNoTurnKind(t)) return [];
   const g = lapGeom(t);
   const hw = (t.width ?? DEFAULT_WIDTH) / 2;
   const n = Math.max(64, Math.ceil(g.total / 0.1));
@@ -4797,7 +5107,7 @@ function renderOfficialDetail(box, t, it) {
 /** Metres a grid unit, as for sections from the drawing (about the game's tracks). */
 const PIECE_MPU = 2.7;
 /** A feature's length in grid units when first placed, by type (others 12). */
-const PIECE_LEN = { straight: 14, tabletop: 12, double: 12, step_up: 10, triple: 16, quad: 20, step_down: 12, step_on: 14, step_on_two: 22, step_on_three: 28, on_off: 14, single_over_table: 16, table_over_single: 16, wall_jump: 8, ski_jump: 14, rhythm: 14, whoops: 12, rollers: 12, dragon_back: 14, braking_bumps: 8, sand: 10, mud: 10, uphill: 12, downhill: 12 };
+const PIECE_LEN = { straight: 14, tabletop: 12, double: 12, step_up: 10, triple: 16, quad: 20, step_down: 12, step_on: 14, step_on_two: 22, step_on_three: 28, on_off: 14, single_over_table: 16, table_over_single: 16, wall_jump: 8, ski_jump: 14, rhythm: 14, whoops: 12, rollers: 12, dragon_back: 14, braking_bumps: 8, sand: 10, mud: 10, uphill: 12, downhill: 12, rocks: 10, roots: 10, logs: 8, log_step: 4, water_crossing: 8, off_camber: 12, hill_climb: 14, woods: 20 };
 const PIECE_PASS = { straight: 0.6, sweeper: 0.5, corner: 0.6, hairpin: 0.7 };
 
 /** A point of the drawing by index, counting round past the end on a closed lap. */
@@ -4902,8 +5212,159 @@ function placeStart() {
 }
 
 
+// ---- No-Turn Takedown: the start platform, + Straight, and moving the whole track ----
+
+/** Start and finish on a No-Turn Takedown: the whole strip follows the pointer by its start line, to be placed. */
+function addNoTurnStart() {
+  const t = track();
+  if (!t) return;
+  if (app.mode !== 'layout') setMode('layout');
+  app.drawing = false;
+  const strip = noTurnStrip(t);
+  const back = strip ? Math.abs(strip.ang) > Math.PI / 2 : false;
+  const turn = strip ? Math.round((((strip.ang - (back ? Math.PI : 0)) * 180) / Math.PI + 540) % 360 - 180) : 0;
+  app.placing = { kind: 'noturn', type: 'noturn', run: strip ? Math.round(strip.run) : NO_TURN_RUN, turn, back, at: null };
+  deselect();
+  refresh();
+  status('Placing the start platform: the strip follows the pointer by its start line (the foot of the drop-in). Q / E turn it 5°, F turns it round, , . make the run 10 grid units shorter or longer. Click or Enter places it, Esc cancels.', 'ok');
+}
+/** Where the strip being placed would go: the start platform, the run and the run-off in one straight line. */
+function noTurnGhost(t, pl) {
+  const ang = ((pl.back ? 180 : 0) + pl.turn) * Math.PI / 180;
+  const at = pl.at ?? { x: (pl.back ? GRID_W - 20 : 20), y: GRID_H / 2 };
+  const sx = round1(Math.round(at.x * 2) / 2);
+  const sy = round1(Math.round(at.y * 2) / 2);
+  const [gate] = noTurnStartPath(sx, sy, ang);
+  const path = noTurnPath(sx, sy, ang, pl.run, 1);
+  const out = { pts: [gate, [sx, sy], path[0], path[1]], level: 'ok', msg: '', joined: true, ring: [sx, sy, 1.5] };
+  const width = t.width ?? DEFAULT_WIDTH;
+  if (out.pts.some(([x, y]) => x < width / 2 || y < width / 2 || x > GRID_W - width / 2 || y > GRID_H - width / 2)) {
+    return Object.assign(out, { level: 'error', msg: `It runs off the ${GRID_W} × ${GRID_H} grid: move it, turn it or make the run shorter.` });
+  }
+  out.msg = `Start platform at ${sx}, ${sy}, a run of ${Math.round(pl.run * PIECE_MPU)} m (${pl.run} grid units) to the finish line, then the run-off. Click to place it.${noTurnStrip(t) ? ' Features on the run keep their place from the start line.' : ''}`;
+  return out;
+}
+function placeNoTurn() {
+  const t = track();
+  const pl = app.placing;
+  if (!t || !pl) return;
+  const gh = noTurnGhost(t, pl);
+  if (gh.level === 'error') { status(gh.msg, 'err'); return; }
+  const had = !!noTurnStrip(t);
+  const [sx, sy] = gh.pts[1];
+  const ang = ((pl.back ? 180 : 0) + pl.turn) * Math.PI / 180;
+  commit((t) => { useFeatures(t); setNoTurn(t, sx, sy, ang, pl.run); app.selPt = -1; app.selStart = -1; });
+  app.placing = null;
+  status(`${had ? 'Moved' : 'Placed'} the start platform: four gates, two each side of the starter's box, dropping in to a run of ${Math.round(pl.run * PIECE_MPU)} m straight to the finish line. + Straight lengthens the run; pick features to put on it.`, 'ok');
+  refresh();
+}
+/** + Straight and − Straight: the run NO_TURN_STEP grid units longer or shorter, from the same start line. */
+function stretchRun(d) {
+  const t = track();
+  const strip = noTurnStrip(t);
+  if (!strip) { status('Place the start platform first (Start and finish).', 'err'); return; }
+  const run = round1(strip.run + d * NO_TURN_STEP);
+  if (run < NO_TURN_RUN_MIN) { status(`The run can't be shorter than ${NO_TURN_RUN_MIN} grid units.`, 'err'); return; }
+  const end = [strip.sx + Math.cos(strip.ang) * (run + NO_TURN_RUNOFF), strip.sy + Math.sin(strip.ang) * (run + NO_TURN_RUNOFF)];
+  if (end[0] < 0 || end[1] < 0 || end[0] > GRID_W || end[1] > GRID_H) { status(`There is no room on the ${GRID_W} × ${GRID_H} grid for a longer run: Move whole track back first.`, 'err'); return; }
+  commit((t) => setNoTurn(t, strip.sx, strip.sy, strip.ang, run));
+  status(`The run is ${Math.round(run * PIECE_MPU)} m (${run} grid units) from the start line to the finish line.`, 'ok');
+}
+
+/** Move whole track: the whole track follows the pointer to be dropped somewhere else, as one undo step. */
+function startMove() {
+  const t = track();
+  if (!t || t.path.length < 2) { status('There is no track to move yet.', 'err'); return; }
+  if (app.mode !== 'layout') setMode('layout');
+  app.drawing = false;
+  app.placing = { kind: 'move', type: 'move', at: null };
+  deselect();
+  refresh();
+  status('Moving the whole track: it follows the pointer, with everything on it (start, features, scenery, ground paint and height). Click or Enter drops it, Esc cancels.', 'ok');
+}
+/** Steps the whole track moves in: whole ground cells and height lattice steps, so its paint and heights move with it. */
+function moveStep(t) {
+  const a = t.ground?.cell ?? 2;
+  const b = t.elevation?.step ?? 2;
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x);
+  return (a * b) / gcd(a, b);
+}
+/** The middle of the track's drawn route and start, where the pointer holds it. */
+function trackMiddle(t) {
+  const g = lapGeom(t);
+  const pts = [];
+  for (let i = 0; i <= 200; i++) { const f = i / 200; if (!(g.hidden ?? []).some(([a, b]) => f > a && f < b)) { const p = pointAt(g, f); pts.push([p.x, p.y]); } }
+  for (const p of t.start?.path ?? []) pts.push(p);
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+}
+function moveOffset(t, pl) {
+  if (!pl.at) return { dx: 0, dy: 0 };
+  const m = trackMiddle(t);
+  const step = moveStep(t);
+  return { dx: Math.round((pl.at.x - m.x) / step) * step, dy: Math.round((pl.at.y - m.y) / step) * step };
+}
+function moveGhost(t, pl) {
+  const { dx, dy } = moveOffset(t, pl);
+  const g = lapGeom(t);
+  const pts = [];
+  for (let i = 0; i <= 400; i++) {
+    const f = i / 400;
+    if ((g.hidden ?? []).some(([a, b]) => f > a && f < b)) continue;
+    const p = pointAt(g, f);
+    pts.push([round2(p.x + dx), round2(p.y + dy)]);
+  }
+  if (g.hidden?.length) {
+    // A strip: the start platform, the run and the run-off, one straight line.
+    const st = t.start?.path ?? [];
+    pts.length = 0;
+    for (const p of [...st, t.path[0], t.path[1]]) pts.push([round2(p[0] + dx), round2(p[1] + dy)]);
+  }
+  const out = { pts, level: 'ok', msg: '', joined: true, ring: null };
+  const off = pts.some(([x, y]) => x < 0 || y < 0 || x > GRID_W || y > GRID_H);
+  const moved = dx || dy ? `${dx >= 0 ? '+' : ''}${dx}, ${dy >= 0 ? '+' : ''}${dy} grid units` : 'where it is';
+  if (off && isNoTurnKind(t)) return Object.assign(out, { level: 'error', msg: `Moved ${moved}, it runs off the ${GRID_W} × ${GRID_H} grid.` });
+  out.msg = `Moved ${moved}. Click to drop it here.`;
+  if (off) Object.assign(out, { level: 'warning', msg: `${out.msg} Part of it is off the ${GRID_W} × ${GRID_H} grid.` });
+  return out;
+}
+/** Moves everything placed on the grid by dx, dy: the route, the start, scenery and their routes, ground paint and heights. */
+function moveWhole(t, dx, dy) {
+  const sh = (p) => { p[0] = round2(p[0] + dx); p[1] = round2(p[1] + dy); };
+  t.path.forEach(sh);
+  t.layout?.points.forEach(sh);
+  t.start?.path.forEach(sh);
+  for (const it of t.scenery ?? []) {
+    it.x = round2(it.x + dx);
+    it.y = round2(it.y + dy);
+    it.route?.forEach(sh);
+  }
+  if (t.ground?.paint) {
+    const c = t.ground.cell || 2;
+    for (const k of Object.keys(t.ground.paint)) t.ground.paint[k] = t.ground.paint[k].map(([x, y]) => [x + dx / c, y + dy / c]).filter(([x, y]) => x >= 0 && y >= 0);
+  }
+  if (t.elevation?.points) t.elevation = { ...t.elevation, points: t.elevation.points.map(([x, y, h]) => [x + dx, y + dy, h]).filter(([x, y]) => x >= 0 && y >= 0) };
+}
+function placeMove() {
+  const t = track();
+  const pl = app.placing;
+  if (!t || !pl) return;
+  const gh = moveGhost(t, pl);
+  if (gh.level === 'error') { status(gh.msg, 'err'); return; }
+  const { dx, dy } = moveOffset(t, pl);
+  app.placing = null;
+  if (!dx && !dy) { refresh(); return; }
+  commit((t) => moveWhole(t, dx, dy));
+  status(`Moved the whole track ${dx >= 0 ? '+' : ''}${dx}, ${dy >= 0 ? '+' : ''}${dy} grid units, with its start, features, scenery, ground paint and heights. Undo puts it back.`, 'ok');
+  refresh();
+}
+
 /** Where what is being placed would go: its points, level ok, warning or error with why, and the ring it snaps on at. */
 function ghostOf(t, pl) {
+  if (pl.kind === 'noturn') return noTurnGhost(t, pl);
+  if (pl.kind === 'move') return moveGhost(t, pl);
+  if (pl.kind === 'sprintline') return sprintLineGhost(t, pl);
   if (pl.kind === 'start') return startGhost(t, pl);
   if (pl.kind === 'finish') return finishGhost(t, pl);
   return featureGhost(t, pl);
@@ -4912,7 +5373,10 @@ function ghostOf(t, pl) {
 function placePiece() {
   const pl = app.placing;
   if (!pl) return;
-  if (pl.kind === 'start') placeStart();
+  if (pl.kind === 'noturn') placeNoTurn();
+  else if (pl.kind === 'move') placeMove();
+  else if (pl.kind === 'sprintline') placeSprintLine();
+  else if (pl.kind === 'start') placeStart();
   else if (pl.kind === 'finish') placeFinish();
   else placeFeature();
 }
@@ -4926,7 +5390,12 @@ function cancelPlacing() {
 function adjustPiece(what, d = 0) {
   const pl = app.placing;
   if (!pl) return;
-  if (pl.kind === 'start') {
+  if (pl.kind === 'noturn') {
+    // A slim grid leaves little room to turn: 5° a press, F turns it round to run the other way.
+    if (what === 'turn') pl.turn = clamp(pl.turn + Math.sign(d) * 5, -30, 30);
+    else if (what === 'mirror') pl.back = !pl.back;
+    else if (what === 'size') pl.run = clamp(pl.run + d * NO_TURN_STEP, NO_TURN_RUN_MIN, NO_TURN_GRID.w);
+  } else if (pl.kind === 'start') {
     if (what === 'turn') pl.turn = clamp(pl.turn + d, -180, 180);
     else if (what === 'mirror') pl.side = -pl.side;
     else if (what === 'size') pl.run = clamp(pl.run + d * 2, START_RUN_MIN, START_RUN_MAX);
@@ -4961,7 +5430,9 @@ function featureGhost(t, pl) {
   const at = pl.at ?? pointAt(g, 0.5);
   const pr = project(g, at.x, at.y);
   const len = Math.min(pl.len, Math.max(0.5, round1(g.total)));
-  const a = clamp(Math.round((pr.f * g.total - len / 2) * 2) / 2, 0, Math.max(0, g.total - len));
+  // On a No-Turn Takedown, features go on the run only: from the start line to the finish line.
+  const lo = g.hidden?.length ? g.cum[5] : 0;
+  const a = clamp(Math.round((pr.f * g.total - len / 2) * 2) / 2, lo, Math.max(lo, g.total - len));
   out.a = a;
   out.len = len;
   const steps = Math.max(2, Math.ceil(len / 0.5));
@@ -5003,9 +5474,9 @@ function placeFeature() {
 function trackStatus(t) {
   if (!t.draft) return { label: 'Race-ready', cls: 'ready', note: 'The game uses this track as saved.' };
   const L = lpts(t);
-  const needs = !!t.open || L.length < 3 || !t.start || t.finish === false;
+  const needs = !!t.open || L.length < 3 || (isSprintKind(t) ? !isSprint(t) : !t.start) || t.finish === false;
   if (!needs && !checkTrack(t, app.data.tracks, true).bad.length) return { label: 'Ready for validation', cls: 'check', note: 'The route is closed, with a start straight and a finish line, and the checks pass: click Ready to race.' };
-  const warns = checkTrack(t, app.data.tracks).warn.filter((m) => !/^(Unfinished|No start straight yet|No finish line yet)/.test(m)).length;
+  const warns = checkTrack(t, app.data.tracks).warn.filter((m) => !/^(Unfinished|No start straight yet|No start line yet|No finish line yet)/.test(m)).length;
   if (warns) return { label: 'Draft with warnings', cls: 'warn', note: `${warns} thing${warns === 1 ? '' : 's'} to look at in Checks. It saves as it is; the game leaves it out until it is Ready to race.` };
   return { label: 'Draft', cls: '', note: 'It saves as it is; the game leaves it out until the route is closed, with a start straight and a finish line, and it is Ready to race.' };
 }
@@ -5029,25 +5500,52 @@ function renderRoute() {
   $('#btnCloseRoute').disabled = n < 3;
   $('#readyRow').hidden = !t.draft;
   $('#btnReady').disabled = !!t.open || n < 3;
-  $('#btnStartPiece').querySelector('span').textContent = t.start ? 'Move start straight' : 'Start straight';
-  $('#btnStartPiece').classList.toggle('sel', app.placing?.kind === 'start');
-  $('#btnStartRemove').disabled = !t.start;
+  // An Enduro Sprint has a start line at the end of its return lane in place of the start straight and its official.
+  const sprintKind = isSprintKind(t);
+  const noTurn = isNoTurnKind(t);
+  $('#noTurnRow').hidden = !noTurn;
+  $('#btnRunLonger').disabled = !noTurnStrip(t);
+  $('#btnRunShorter').disabled = !noTurnStrip(t);
+  $('#btnMoveTrack').disabled = t.path.length < 2;
+  $('#btnMoveTrack').classList.toggle('on', app.placing?.kind === 'move');
+  $('#btnDrawRoute').style.display = noTurn ? 'none' : '';
+  $('#btnCloseRoute').style.display = noTurn ? 'none' : '';
+  $('#btnStartPiece').querySelector('span').textContent = noTurn ? (noTurnStrip(t) ? 'Move start platform' : 'Start platform') : sprintKind ? (isSprint(t) ? 'Move start line' : 'Start line') : t.start ? 'Move start straight' : 'Start straight';
+  $('#btnStartPiece').title = sprintKind ? 'Place the start line: riders leave it one at a time. The return lane runs single file from the finish line round to it, and the timed test from it round to the finish line.' : 'Place the start straight: the gate, the riders\' line-up and the run onto the route. Its end (the ring) snaps onto the route where riders join it. It is never placed for you.';
+  if (noTurn) $('#btnStartPiece').title = 'Place the start platform: four gates, two each side of the starter\'s box, dropping in to the run. The whole strip follows the pointer by its start line; the run goes straight from there to the finish line.';
+  $('#btnStartPiece').classList.toggle('sel', app.placing?.kind === 'start' || app.placing?.kind === 'sprintline' || app.placing?.kind === 'noturn');
+  $('#btnStartPiece').disabled = sprintKind && (!!t.open || n < 3);
+  $('#btnStartRemove').querySelector('span').textContent = sprintKind && !t.start ? 'Remove start line' : 'Remove start straight';
+  $('#btnStartRemove').disabled = sprintKind && !t.start ? !isSprint(t) : !t.start;
+  $('#btnStartOfficial').style.display = sprintKind || noTurn ? 'none' : '';
+  $('#btnStartRemove').style.display = noTurn ? 'none' : '';
+  $('#btnFinishPiece').style.display = noTurn ? 'none' : '';
+  $('#btnFinishRemove').style.display = noTurn ? 'none' : '';
   $('#btnStartOfficial').querySelector('span').textContent = officialIndex(t) >= 0 ? 'Start board official ✓' : 'Start board official';
   $('#btnFinishPiece').querySelector('span').textContent = t.finish === false ? 'Finish line' : 'Move finish line';
   $('#btnFinishPiece').disabled = !!t.open || n < 3;
   $('#btnFinishPiece').classList.toggle('sel', app.placing?.kind === 'finish');
   $('#btnFinishRemove').disabled = t.finish === false;
-  const needs = [!t.start && 'a start straight', t.finish === false && 'a finish line'].filter(Boolean);
-  const fcs = !needs.length && !t.open ? firstCornerLeg(t) : null;
+  const needs = [(sprintKind ? !isSprint(t) && 'a start line' : !t.start && 'a start straight'), t.finish === false && 'a finish line'].filter(Boolean);
+  const fcs = !needs.length && !t.open && !sprintKind && !noTurn ? firstCornerLeg(t) : null;
   const startNote = needs.length ? ` Still needed to race: ${needs.join(' and ')} (Start and finish${t.finish === false && t.open ? ', the finish line once the route is closed' : ''}).` : fcs ? ` The first corner is the start straight's end: ${fcs.metres} m between ${fcs.points} (the blue stretch).` : '';
   const metres = n >= 2 ? `${Math.round(lapGeom(t).total * PIECE_MPU)} m` : '';
   const pl = app.placing;
   const gh = pl && pl.kind !== 'feature' ? ghostOf(t, pl) : null;
   $('#routeHint').className = gh ? (gh.level === 'error' ? 'bad' : gh.level === 'warning' ? 'warn' : 'good') : 'hint';
+  const strip = noTurn ? noTurnStrip(t) : null;
   $('#routeHint').textContent = gh
-    ? pl.kind === 'start'
+    ? pl.kind === 'noturn' || pl.kind === 'move'
+      ? `${gh.msg} Esc cancels.`
+      : pl.kind === 'sprintline'
+      ? `Start line. ${gh.msg} Esc cancels.`
+      : pl.kind === 'start'
       ? `Start straight, about ${Math.round(gh.total * PIECE_MPU)} m from the gate to where it joins, coming in from the ${pl.side > 0 ? 'right' : 'left'}${pl.turn ? `, turned ${pl.turn}°` : ''}. Q / E turn it, F the other side, , . shorter or longer. ${gh.msg} Esc cancels.`
       : `Finish line. ${gh.msg} Esc cancels.`
+    : noTurn
+      ? strip
+        ? `A straight strip: a run of ${Math.round(strip.run * PIECE_MPU)} m from the start platform to the finish line, then the run-off. + Straight and − Straight lengthen or shorten the run; place features on it. Move start platform places it again, Move whole track moves everything.`
+        : 'A No-Turn Takedown is never drawn by hand: pick Start platform and click where the start line goes. The run goes straight on from there to the finish line.'
     : app.drawing
       ? `Drawing: click the ground to add point ${n}${n >= 3 ? ', or click the first point (green ring) to close the route' : ''}. Enter or Esc stops, Backspace takes the last point off.`
       : !n
@@ -5056,7 +5554,8 @@ function renderRoute() {
           ? `An open route of ${n} point${n === 1 ? '' : 's'}${metres ? `, ${metres}` : ''}. Draw route carries on from its last point; Close the route joins the last point back to the first. Drag the points to shape it.${startNote}`
           : `A closed route of ${n} points, ${metres}. Drag its points, Round corner a point for curve handles, and place features on it. Open the route (or − Segment on a point) takes it apart again.${startNote}`;
   const pal = $('#featPal');
-  const types = featureTypes();
+  // A No-Turn Takedown has no bends: no corner features (trackCheck.ts NO_TURN_CORNERS).
+  const types = featureTypes().filter((ty) => !noTurn || !NO_TURN_CORNERS.includes(ty));
   if (pal.dataset.built !== types.join(',')) {
     pal.innerHTML = '';
     pal.dataset.built = types.join(',');
@@ -5187,8 +5686,12 @@ function boundaryCrossings(t) {
   const out = [];
   if (!t?.path?.length) return out;
   const seen = new Set();
+  const grid = isNoTurnKind(t) ? NO_TURN_GRID : { w: 100, h: 60 };
+  const strip = noTurnStrip(t);
   t.path.forEach((p, i) => {
-    if (!outside(p)) return;
+    // A strip's hidden way back runs off the grid by design.
+    if (strip && i >= 2 && i <= 4) return;
+    if (!(p[0] < 0 || p[1] < 0 || p[0] > grid.w || p[1] > grid.h)) return;
     const seg = routeSegOf(t, i);
     if (seen.has(seg)) return;
     seen.add(seg);
@@ -5238,6 +5741,8 @@ function followFeatures(t, anchor) {
 function addStart() {
   const t = track();
   if (!t) return;
+  if (isSprintKind(t)) return addSprintLine();
+  if (isNoTurnKind(t)) return addNoTurnStart();
   if (app.mode !== 'layout') setMode('layout');
   app.drawing = false;
   app.placing = { ...startPieceFor(), at: null };
@@ -5249,6 +5754,11 @@ function addStart() {
 }
 function removeStart() {
   const t = track();
+  if (isSprintKind(t) && !t.start && isSprint(t)) {
+    commit((t) => removeReturnLane(t));
+    status('Removed the start line: the return lane is plain track again. Undo puts it back; place a new one from Start and finish.', 'ok');
+    return;
+  }
   if (!t?.start) return;
   commit((t) => { delete t.start; app.selStart = -1; });
   status('Removed the start straight. Undo puts it back; place a new one from Start and finish.', 'ok');
@@ -5477,6 +5987,8 @@ function snapFinishF(t, f) {
 function setFinish(t, f) {
   setFinishCore(t, f);
   snapFinishArches(t);
+  derive(t);
+  snapSprintStart(t);
 }
 function setFinishCore(t, f) {
   const g = lapGeom(t);
@@ -5588,6 +6100,58 @@ function placeFinish() {
   status(`${had ? 'Moved' : 'Placed'} the finish line. Every lap starts and ends here, and the sections are measured from it; drag the point to move it along the lap, or place it again from Start and finish.${track().start ? '' : ' Place a start straight to race the track.'}`, 'ok');
   refresh();
 }
+/** Start line (an Enduro Sprint): a bar follows the pointer along the lap; the return lane runs from the finish line to it. */
+function addSprintLine() {
+  const t = track();
+  if (!t) return;
+  if (t.open || lpts(t).length < 3) { status('Close the route first: the start line goes on a closed route, the return lane running to it from the finish line.', 'err'); return; }
+  if (app.mode !== 'layout') setMode('layout');
+  app.drawing = false;
+  app.placing = { kind: 'sprintline', type: 'sprintline', at: null };
+  deselect();
+  refresh();
+  status('Placing the start line: bring the bar onto the lap where riders leave from. The return lane runs single file from the finish line round to it; the test from it round to the finish line. Click or Enter places it, Esc cancels.', 'ok');
+}
+/** Where the start line being placed would go: a bar across the lap, at least RETURN_MIN grid units round from the finish line. */
+function sprintLineGhost(t, pl) {
+  const width = t.width ?? DEFAULT_WIDTH;
+  const out = { pts: [], level: 'ok', msg: '', joined: false, ring: null };
+  const fail = (msg) => Object.assign(out, { level: 'error', msg });
+  if (t.open || lpts(t).length < 3) return fail('The start line goes on a closed route: close the route first.');
+  const lap = lapGeom(t);
+  const at = pl.at ?? pointAt(lap, isSprint(t) ? sprintStartF(t) : 0.15);
+  const pr = project(lap, at.x, at.y);
+  const p = pointAt(lap, pr.f);
+  const a = headingAt(lap, pr.f) + Math.PI / 2;
+  const w = width / 2 + 1;
+  out.pts = [[round2(p.x - Math.cos(a) * w), round2(p.y - Math.sin(a) * w)], [round2(p.x + Math.cos(a) * w), round2(p.y + Math.sin(a) * w)]];
+  out.ring = [round1(p.x), round1(p.y), START_SNAP];
+  out.d = pr.f * lap.total;
+  if (pr.dist > START_SNAP) return fail('It isn\'t on the lap: bring it onto the lap, and it snaps on across the track.');
+  out.joined = true;
+  if (out.d < RETURN_MIN) return fail(`Only ${out.d.toFixed(1)} grid units round from the finish line: the return lane needs at least ${RETURN_MIN} for the riders to queue single file. Bring it further round.`);
+  if (lap.total - out.d < RETURN_MIN) return fail('Too close to the finish line from the other side: leave the test some length.');
+  const metres = Math.round(pr.f * lapLength(t));
+  out.msg = `${metres} m round from the finish line. Click to put the start line here: the return lane runs single file from the finish line to it, and the timed test from it round to the finish line.`;
+  const probe = clone(t);
+  setReturnLane(probe, out.d);
+  const probs = sprintProblems(probe);
+  if (probs.length) Object.assign(out, { level: 'warning', msg: `${out.msg} It can go here, but: ${probs[0]}.` });
+  return out;
+}
+function placeSprintLine() {
+  const t = track();
+  const pl = app.placing;
+  if (!t || !pl) return;
+  const gh = sprintLineGhost(t, pl);
+  if (gh.level === 'error') { status(gh.msg, 'err'); return; }
+  const had = isSprint(t);
+  commit((t) => { setReturnLane(t, gh.d); snapSprintStart(t); });
+  app.placing = null;
+  status(`${had ? 'Moved' : 'Placed'} the start line. The return lane (yellow) runs single file from the finish line to it; riders leave it one at a time and ride the test round to the finish line. The race view builds the start there: the arch, the timing beam and the two officials (place a Sprint start from Scenery to choose its words and colour).`, gh.level === 'warning' ? 'err' : 'ok');
+  refresh();
+}
+
 /** + Finish line and Start and finish: the finish line follows the pointer to be placed. */
 function addFinish() {
   const t = track();
@@ -5903,12 +6467,14 @@ function hit(sx, sy) {
         if (Math.abs(sx - s.x) <= 7 && Math.abs(sy - s.y) <= 7) return { kind: 'handle', i: app.selPt, side };
       }
     }
-    const sp = t.start?.path ?? [];
+    // A No-Turn Takedown's points are never dragged: the strip is placed whole (Start platform, + Straight, Move whole track).
+    const strip = isNoTurnKind(t);
+    const sp = strip ? [] : t.start?.path ?? [];
     for (let i = sp.length - 1; i >= 0; i--) {
       const s = toScreen(sp[i][0], sp[i][1]);
       if (Math.abs(sx - s.x) <= 8 && Math.abs(sy - s.y) <= 8) return { kind: 'spt', i };
     }
-    for (let i = L.length - 1; i >= 0; i--) {
+    for (let i = strip ? -1 : L.length - 1; i >= 0; i--) {
       const s = toScreen(L[i][0], L[i][1]);
       if (Math.hypot(sx - s.x, sy - s.y) <= 9) return { kind: 'point', i };
     }
@@ -6514,6 +7080,9 @@ $('#btnDrawRoute').addEventListener('click', () => (app.drawing ? stopDrawing() 
 $('#btnCloseRoute').addEventListener('click', () => { const t = track(); if (!t) return; if (t.open || lpts(t).length < 3) closeRoute(); else deleteSegment(lpts(t).length - 1); });
 $('#btnReady').addEventListener('click', readyToRace);
 $('#btnStartPiece').addEventListener('click', addStart);
+$('#btnRunLonger').addEventListener('click', () => stretchRun(1));
+$('#btnRunShorter').addEventListener('click', () => stretchRun(-1));
+$('#btnMoveTrack').addEventListener('click', () => (app.placing?.kind === 'move' ? cancelPlacing() : startMove()));
 $('#btnStartOfficial').addEventListener('click', pickOfficial);
 $('#btnStartRemove').addEventListener('click', removeStart);
 $('#btnFinishPiece').addEventListener('click', addFinish);
@@ -6665,7 +7234,8 @@ window.addEventListener('keydown', (e) => {
   if (mod && app.mode === 'scenery' && e.key.toLowerCase() === 'x') { e.preventDefault(); if (copyItems()) deleteItem(); return; }
   if (mod && app.mode === 'scenery' && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteItems(); return; }
   if (mod && app.mode === 'scenery' && e.key.toLowerCase() === 'a') { e.preventDefault(); selectAllItems(); return; }
-  if (mod) return;
+  // Ctrl+Q and Ctrl+E are the fine turn (below); Alt+E would open the browser's menu on Windows (Boss, 30 Oct 2026).
+  if (mod && !(app.mode === 'scenery' && /^[qe]$/i.test(e.key))) return;
   const modes = { 1: 'layout', 2: 'surface', 3: 'ground', 4: 'scenery', 5: 'height' };
   if (modes[e.key]) { setMode(modes[e.key]); return; }
   if (e.key.toLowerCase() === 'p') { $('#btnPlay').click(); return; }
@@ -6691,9 +7261,9 @@ window.addEventListener('keydown', (e) => {
     if (del && app.selRoute > 0) { e.preventDefault(); deleteRoutePoint(app.selRoute); }
     else if (del) { e.preventDefault(); deleteItem(); }
     else if (e.key.toLowerCase() === 'q' || e.key.toLowerCase() === 'e') {
-      // 15° a press; Shift for 5°, Alt for 1°. With nothing selected, it turns the item about to be placed.
+      // 15° a press; Shift for 5°, Ctrl for 1° (Alt still works where the browser leaves it alone). With nothing selected, it turns the item about to be placed.
       e.preventDefault();
-      const step = (e.altKey ? 1 : e.shiftKey ? 5 : 15) * (e.key.toLowerCase() === 'q' ? -1 : 1);
+      const step = (mod || e.altKey ? 1 : e.shiftKey ? 5 : 15) * (e.key.toLowerCase() === 'q' ? -1 : 1);
       // Snapped while placed or dragged, it swings round the join instead (Snap object).
       if (drag?.kind === 'item' && drag.started) {
         // Turned while dragged: snapped, it swings round the join; free, the turn is kept with the
